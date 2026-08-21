@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.example
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Data outputs (regenerable)
+data/synthetic/*.json
+data/processed/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
