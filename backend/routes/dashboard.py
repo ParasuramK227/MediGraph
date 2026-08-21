@@ -2,7 +2,7 @@
 from flask import Blueprint
 
 from services import medicine_service
-from services.graph_explore import get_stats
+from services.graph_explore import get_stats, get_trends
 from services.provenance_service import stamp
 
 bp = Blueprint("dashboard", __name__)
@@ -11,6 +11,7 @@ bp = Blueprint("dashboard", __name__)
 @bp.get("/dashboard")
 def dashboard():
     stats = get_stats()
+    trends = get_trends()
     shortages = medicine_service.detect_shortages(limit=10)
     expiring = medicine_service.expiring_batches(90)
     node_types = stats["node_types"]
@@ -28,6 +29,7 @@ def dashboard():
             "nodes": stats["total_nodes"],
             "relationships": stats["total_relationships"],
         },
+        "trends": trends,
         "alerts": {
             "out_of_stock": [s for s in shortages if s["status"] == "out"],
             "low_stock": [s for s in shortages if s["status"] == "low"],

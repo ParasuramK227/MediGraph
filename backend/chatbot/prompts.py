@@ -11,6 +11,7 @@ ALLOWED_INTENTS = [
     "FIND_NEARBY_MEDICINE",
     "PATIENT_SIMILARITY",
     "TREATMENT_INTELLIGENCE",
+    "PATIENT_PROFILE",
     "MEDICINE_SHORTAGE",
     "SUPPLY_CHAIN_TRACE",
     "GRAPH_STATS",
@@ -26,6 +27,8 @@ Allowed intents:
 - FIND_NEARBY_MEDICINE: nearest facility stocking a medicine (may include a city). entities: medicine, city?
 - PATIENT_SIMILARITY: find patients clinically similar to a named patient. entity: patient
 - TREATMENT_INTELLIGENCE: treatments/outcomes for patients like a named patient. entity: patient
+- PATIENT_PROFILE: general questions about one specific patient (who they are, their \
+conditions, symptoms, medications, history, summary). entity: patient
 - MEDICINE_SHORTAGE: shortage/low-stock questions; optional entity: medicine
 - SUPPLY_CHAIN_TRACE: where a medicine/batch comes from; trace origin. entity: medicine or batch
 - GRAPH_STATS: counts/overview of the data.
@@ -48,6 +51,9 @@ STRICT RULES:
 - Do not provide diagnosis or treatment advice; you are explaining retrieved results.
 - If the package contains empty results, say so plainly and suggest what to search for.
 - You may reference entity names so the user can find them in the Knowledge Graph.
+- PLAIN TEXT ONLY. Never use markdown or emphasis characters of any kind: no asterisks (*), \
+no underscores for emphasis (_), no hashes (#), no backticks. Write short, readable sentences, \
+one fact per line. For lists, start each line with "- ". Do not decorate words in any way.
 """
 
 

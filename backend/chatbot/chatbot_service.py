@@ -22,6 +22,22 @@ from utils.validation import ValidationError
 
 DEFAULT_ORIGIN_CITY = "Chennai"
 
+# LLM output is rendered as plain text; strip any markdown the model adds anyway.
+_MD_PATTERNS = [
+    (re.compile(r"\*{1,3}([^*\n]+)\*{1,3}"), r"\1"),
+    (re.compile(r"(?<![\w])_{1,3}([^_\n]+)_{1,3}(?![\w])"), r"\1"),
+    (re.compile(r"`{1,3}([^`]*)`{1,3}"), r"\1"),
+    (re.compile(r"^\s*#{1,6}\s*", re.MULTILINE), ""),
+    (re.compile(r"\n{3,}"), "\n\n"),
+]
+
+
+def strip_markdown(text: str) -> str:
+    for pattern, repl in _MD_PATTERNS:
+        text = pattern.sub(repl, text)
+    return text
+
+
 CITY_COORDS = {
     "chennai": (13.0827, 80.2707),
     "mumbai": (19.0760, 72.8777),
@@ -45,6 +61,9 @@ _TREATMENT_HINTS = ("treatment", "treated", "therapy", "outcome", "effective")
 _TRACE_HINTS = ("trace", "where does", "come from", "origin", "supply chain",
                 "batch", "manufacturer", "supplier", "sourced")
 _STATS_HINTS = ("how many", "stats", "statistics", "overview", "count", "summary")
+_PROFILE_HINTS = ("who is", "who's", "about patient", "profile", "history",
+                  "tell me about", "details of", "details for", "info on",
+                  "information on", "summarize patient", "condition of")
 
 
 def handle_message(message: str) -> dict:
@@ -70,9 +89,11 @@ def handle_message(message: str) -> dict:
     reply = None
     if client is not None and not degraded:
         try:
-            reply = client.generate(
-                prompts.build_explanation_messages(message, evidence_package)
-            ).strip()
+            reply = strip_markdown(
+                client.generate(
+                    prompts.build_explanation_messages(message, evidence_package)
+                ).strip()
+            )
         except LLMError:
             degraded = True
     if not reply:
@@ -106,6 +127,8 @@ def dispatch(intent: str, entities: dict) -> tuple[dict, list[dict], str]:
             return _dispatch_similarity(entities.get("patient"))
         if intent == "TREATMENT_INTELLIGENCE":
             return _dispatch_treatments(entities.get("patient"))
+        if intent == "PATIENT_PROFILE":
+            return _dispatch_patient_profile(entities.get("patient"))
         if intent == "MEDICINE_SHORTAGE":
             return _dispatch_shortage(entities.get("medicine"))
         if intent == "SUPPLY_CHAIN_TRACE":
@@ -199,6 +222,25 @@ def _dispatch_treatments(patient: str | None):
     return package, links, template
 
 
+def _dispatch_patient_profile(patient: str | None):
+    if not patient:
+        raise ValidationError("Please name a patient.")
+    pid = _resolve_patient(patient)
+    if pid is None:
+        return {"error": f"No patient matching '{patient}' was found."}, [], \
+            f"No patient matching '{patient}' was found."
+    package = retrieval_service.build_patient_evidence_package(pid)
+    p = package["patient"]
+    links = [{"label": p["name"], "entity_id": pid}]
+    template = (
+        f"{p['name']} ({p.get('age')}y {p.get('gender')}, {p.get('city')}, blood type {p.get('blood_type')}). "
+        f"Diagnoses: {', '.join(package['diseases']) or 'none recorded'}. "
+        f"Symptoms: {len(package['symptoms'])} recorded. "
+        f"Medications: {', '.join(package['medications']) or 'none'}."
+    )
+    return package, links, template
+
+
 def _dispatch_shortage(medicine: str | None):
     if medicine:
         return _dispatch_availability(medicine)
@@ -288,8 +330,9 @@ def fallback_extract(message: str) -> tuple[str, dict]:
     has_stats = any(h in lowered for h in _STATS_HINTS)
     has_similar = any(h in lowered for h in _SIMILAR_HINTS)
     has_treatment = any(h in lowered for h in _TREATMENT_HINTS)
+    has_profile = any(h in lowered for h in _PROFILE_HINTS)
     has_med_topic = bool(medicine) or any(h in lowered for h in _MEDICINE_HINTS)
-    has_patient_topic = "patient" in lowered
+    has_patient_topic = "patient" in lowered or bool(patient)
 
     if has_nearby and has_med_topic:
         return "FIND_NEARBY_MEDICINE", entities
@@ -299,6 +342,8 @@ def fallback_extract(message: str) -> tuple[str, dict]:
         return "PATIENT_SIMILARITY", entities
     if has_treatment and has_patient_topic:
         return "TREATMENT_INTELLIGENCE", entities
+    if patient and (has_profile or has_patient_topic):
+        return "PATIENT_PROFILE", entities
     if has_shortage:
         return "MEDICINE_SHORTAGE", entities
     if has_stats:

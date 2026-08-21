@@ -25,6 +25,9 @@ export default function KnowledgeGraph() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fitKey, setFitKey] = useState(0)
+  // Focus mode: panels hidden until toggled so the graph gets full space.
+  const [showLeft, setShowLeft] = useState(false)
+  const [showRight, setShowRight] = useState(false)
 
   // initial schema + focused subgraph (deep link ?entity=…)
   useEffect(() => {
@@ -94,6 +97,7 @@ export default function KnowledgeGraph() {
 
   function selectNode(node) {
     setSelected(node)
+    setShowRight(true)
     api.get(`/graph/entity/${encodeURIComponent(node.id)}`).then(setDetails).catch(() => {})
   }
 
@@ -118,73 +122,98 @@ export default function KnowledgeGraph() {
 
   if (error && !nodes.length) return <ErrorState error={error} onRetry={() => window.location.reload()} />
 
+  const layoutClass = `${showLeft ? '' : 'no-left'}${showRight ? '' : ' no-right'}`
+
   return (
     <div>
-      <div className="page-header">
-        <h1>Knowledge Graph</h1>
-        <p>Explore relationships across clinical and pharmaceutical data</p>
+      <div className="kg-titlebar">
+        <div>
+          <h1>Knowledge Graph</h1>
+          <p>
+            Explore relationships across clinical and pharmaceutical data
+            {schema && ` · ${schema.node_types.reduce((a, n) => a + n.count, 0)} nodes`}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className={`btn btn-small ${showLeft ? '' : 'btn-secondary'}`}
+            onClick={() => setShowLeft((v) => !v)}
+          >
+            Search &amp; filters
+          </button>
+          <button
+            type="button"
+            className={`btn btn-small ${showRight ? '' : 'btn-secondary'}`}
+            onClick={() => setShowRight((v) => !v)}
+          >
+            Details
+          </button>
+        </div>
       </div>
 
-      <div className="kg-layout">
+      <div className={`kg-layout ${layoutClass}`}>
         {/* left: search + filters */}
-        <div className="kg-panel">
-          <form onSubmit={doSearch}>
-            <input
-              type="text"
-              placeholder="Search entities…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ width: '100%', marginBottom: 8 }}
-            />
-            <button className="btn btn-small" style={{ width: '100%' }} type="submit">
-              Search &amp; focus
-            </button>
-          </form>
+        {showLeft && (
+          <div className="kg-panel">
+            <form onSubmit={doSearch}>
+              <input
+                type="text"
+                placeholder="Search entities…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                style={{ width: '100%', marginBottom: 8 }}
+              />
+              <button className="btn btn-small" style={{ width: '100%' }} type="submit">
+                Search &amp; focus
+              </button>
+            </form>
 
-          <div className="filter-group section-gap">
-            <h4>Entity types in view</h4>
-            {nodeTypesInGraph.map((t) => (
-              <label key={t} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={typeFilters ? typeFilters[t] !== false : true}
-                  onChange={(e) =>
-                    setTypeFilters((prev) => ({ ...prev, [t]: e.target.checked }))
-                  }
-                />
-                <span className="legend-dot" style={{ background: TYPE_COLORS[t] || '#64748b' }} />
-                {t}
-              </label>
-            ))}
-          </div>
-
-          <div className="filter-group">
-            <h4>Relationships in view</h4>
-            {relTypesInGraph.length === 0 && <span className="muted">—</span>}
-            {relTypesInGraph.map((t) => (
-              <label key={t} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={relFilters ? relFilters[t] !== false : true}
-                  onChange={(e) =>
-                    setRelFilters((prev) => ({ ...prev, [t]: e.target.checked }))
-                  }
-                />
-                {t}
-              </label>
-            ))}
-          </div>
-
-          {schema && (
-            <div className="filter-group">
-              <h4>Graph schema</h4>
-              <p className="muted" style={{ margin: 0 }}>
-                {schema.node_types.reduce((acc, n) => acc + n.count, 0)} nodes ·{' '}
-                {schema.relationship_types.reduce((acc, r) => acc + r.count, 0)} relationships
-              </p>
+            <div className="filter-group section-gap">
+              <h4>Entity types in view</h4>
+              {nodeTypesInGraph.map((t) => (
+                <label key={t} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={typeFilters ? typeFilters[t] !== false : true}
+                    onChange={(e) =>
+                      setTypeFilters((prev) => ({ ...prev, [t]: e.target.checked }))
+                    }
+                  />
+                  <span className="legend-dot" style={{ background: TYPE_COLORS[t] || '#64748b' }} />
+                  {t}
+                </label>
+              ))}
             </div>
-          )}
-        </div>
+
+            <div className="filter-group">
+              <h4>Relationships in view</h4>
+              {relTypesInGraph.length === 0 && <span className="muted">—</span>}
+              {relTypesInGraph.map((t) => (
+                <label key={t} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={relFilters ? relFilters[t] !== false : true}
+                    onChange={(e) =>
+                      setRelFilters((prev) => ({ ...prev, [t]: e.target.checked }))
+                    }
+                  />
+                  {t}
+                </label>
+              ))}
+            </div>
+
+            {schema && (
+              <div className="filter-group">
+                <h4>Graph schema</h4>
+                <p className="muted" style={{ margin: 0 }}>
+                  {schema.node_types.reduce((acc, n) => acc + n.count, 0)} nodes ·{' '}
+                  {schema.relationship_types.reduce((acc, r) => acc + r.count, 0)} relationships
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* center: canvas */}
         <div className="kg-canvas-wrap">
@@ -210,37 +239,39 @@ export default function KnowledgeGraph() {
         </div>
 
         {/* right: details */}
-        <div className="kg-panel">
-          {!details ? (
-            <p className="muted">Click a node to inspect it.</p>
-          ) : (
-            <>
-              <p className="detail-type">{details.type}</p>
-              <h2 className="detail-title">{details.label}</h2>
-              <button
-                className="btn btn-small section-gap"
-                onClick={() => expandNode(details.id)}
-              >
-                Expand neighbors
-              </button>
+        {showRight && (
+          <div className="kg-panel">
+            {!details ? (
+              <p className="muted">Click a node to inspect it.</p>
+            ) : (
+              <>
+                <p className="detail-type">{details.type}</p>
+                <h2 className="detail-title">{details.label}</h2>
+                <button
+                  className="btn btn-small section-gap"
+                  onClick={() => expandNode(details.id)}
+                >
+                  Expand neighbors
+                </button>
 
-              <div className="filter-group section-gap">
-                <h4>Properties</h4>
-                <table className="props-table">
-                  <tbody>
-                    {Object.entries(details.properties || {})
-                      .filter(([k]) => k !== 'id')
-                      .map(([k, v]) => (
-                        <tr key={k}><td>{k}</td><td>{String(v ?? '—')}</td></tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+                <div className="filter-group section-gap">
+                  <h4>Properties</h4>
+                  <table className="props-table">
+                    <tbody>
+                      {Object.entries(details.properties || {})
+                        .filter(([k]) => k !== 'id')
+                        .map(([k, v]) => (
+                          <tr key={k}><td>{k}</td><td>{String(v ?? '—')}</td></tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <RelationshipList entityId={details.id} onJump={loadSubgraph} />
-            </>
-          )}
-        </div>
+                <RelationshipList entityId={details.id} onJump={loadSubgraph} />
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

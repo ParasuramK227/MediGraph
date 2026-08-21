@@ -175,3 +175,80 @@ def get_stats() -> dict:
         "total_relationships": rel_count,
         "node_types": node_types,
     }
+
+
+_DIAGNOSES_TREND_QUERY = """
+MATCH (:Patient)-[r:HAS_DIAGNOSIS]->(:Disease)
+WHERE r.diagnosed_at >= date() - duration('P11M') AND r.diagnosed_at <= date()
+RETURN left(toString(r.diagnosed_at), 7) AS month, count(*) AS count
+ORDER BY month
+"""
+
+_EXPIRY_TREND_QUERY = """
+MATCH (b:DrugBatch)
+WHERE b.expiry_date >= date() AND b.expiry_date < date() + duration('P12M')
+RETURN left(toString(b.expiry_date), 7) AS month,
+       count(*) AS count, sum(b.quantity_initial) AS units
+ORDER BY month
+"""
+
+
+def _month_buckets(months_back: int = 11, months_forward: int = 12) -> list[str]:
+    from datetime import date
+
+    today = date.today().replace(day=1)
+    buckets = []
+    year, month = today.year, today.month
+    for _ in range(months_back + 1):
+        buckets.append(f"{year:04d}-{month:02d}")
+        month -= 1
+        if month == 0:
+            month, year = 12, year - 1
+    return list(reversed(buckets))
+
+
+def _forward_month_buckets(count: int = 12) -> list[str]:
+    from datetime import date
+
+    today = date.today().replace(day=1)
+    buckets, year, month = [], today.year, today.month
+    for _ in range(count):
+        buckets.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month == 13:
+            month, year = 1, year + 1
+    return buckets
+
+
+def get_trends() -> dict:
+    """Deterministic monthly aggregates for the dashboard trend charts."""
+    diag_rows = run_query(_DIAGNOSES_TREND_QUERY)
+    exp_rows = run_query(_EXPIRY_TREND_QUERY)
+
+    diagnoses = {str(r["month"])[:7]: r["count"] for r in diag_rows}
+    expiring = {str(r["month"])[:7]: {"count": r["count"], "units": r["units"] or 0} for r in exp_rows}
+
+    months = _month_buckets()
+    diagnoses_series = [
+        {"month": m, "label": _month_label(m), "count": diagnoses.get(m, 0)} for m in months
+    ]
+    expiry_series = [
+        {
+            "month": m,
+            "label": _month_label(m),
+            "count": expiring.get(m, {}).get("count", 0),
+            "units": expiring.get(m, {}).get("units", 0),
+        }
+        for m in _forward_month_buckets()
+    ]
+    return {
+        "diagnoses_per_month": diagnoses_series,
+        "batches_expiring_per_month": expiry_series,
+    }
+
+
+def _month_label(ym: str) -> str:
+    from datetime import date
+
+    y, m = int(ym[:4]), int(ym[5:7])
+    return date(y, m, 1).strftime("%b %y")

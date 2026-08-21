@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import cytoscape from 'cytoscape'
+import useTheme from '../hooks/useTheme.js'
 
 const TYPE_COLORS = {
   Patient: '#2563eb',
@@ -19,6 +20,24 @@ const TYPE_COLORS = {
   MedicalRecord: '#9ca3af',
   LabTest: '#ca8a04',
   Doctor: '#0f766e',
+}
+
+// Dark-slate label that reads clearly but stays softer than pure black.
+const THEME = {
+  light: {
+    nodeLabel: '#334155',
+    edgeLine: '#94a3b8',
+    edgeLabel: '#475569',
+    textBg: '#ffffff',
+    selection: '#0ea5e9',
+  },
+  dark: {
+    nodeLabel: '#cbd5e1',
+    edgeLine: '#43587d',
+    edgeLabel: '#9fb2d1',
+    textBg: '#111a2c',
+    selection: '#38bdf8',
+  },
 }
 
 function buildElements(nodes = [], edges = []) {
@@ -51,10 +70,12 @@ export default function GraphCanvas({
   layoutName = 'cose',
   fitKey = 0,
 }) {
+  const theme = useTheme()
   const containerRef = useRef(null)
   const cyRef = useRef(null)
 
   useEffect(() => {
+    const t = THEME[theme]
     const cy = cytoscape({
       container: containerRef.current,
       elements: buildElements(nodes, edges),
@@ -64,35 +85,36 @@ export default function GraphCanvas({
           style: {
             'background-color': 'data(color)',
             label: 'data(label)',
-            color: '#1e293b',
-            'font-size': 9,
+            color: t.nodeLabel,
+            'font-size': 11,
+            'font-weight': 600,
             width: 26,
             height: 26,
             'text-valign': 'bottom',
-            'text-margin-y': 4,
+            'text-margin-y': 5,
             'border-width': 2,
-            'border-color': '#ffffff',
+            'border-color': t.textBg,
           },
         },
         {
           selector: 'edge',
           style: {
             width: 1.5,
-            'line-color': '#cbd5e1',
-            'target-arrow-color': '#cbd5e1',
+            'line-color': t.edgeLine,
+            'target-arrow-color': t.edgeLine,
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             label: 'data(label)',
-            'font-size': 7,
-            color: '#64748b',
-            'text-background-color': '#f8fafc',
-            'text-background-opacity': 1,
+            'font-size': 8,
+            color: t.edgeLabel,
+            'text-background-color': t.textBg,
+            'text-background-opacity': 0.9,
             'text-background-padding': 2,
           },
         },
         {
           selector: 'node:selected',
-          style: { 'border-width': 3, 'border-color': '#0ea5e9' },
+          style: { 'border-width': 3, 'border-color': t.selection },
         },
       ],
       layout: { name: layoutName, animate: false, padding: 24 },
@@ -105,7 +127,7 @@ export default function GraphCanvas({
     cyRef.current = cy
     return () => cy.destroy()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, layoutName])
+  }, [nodes, edges, layoutName, theme])
 
   useEffect(() => {
     if (cyRef.current && fitKey > 0) {
