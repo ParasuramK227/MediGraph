@@ -1,0 +1,41 @@
+.backend-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono-stat);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.backend-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-muted);
+}
+
+.backend-status--offline {
+  color: var(--color-danger);
+}
+
+.backend-status--offline .dot {
+  background: var(--color-danger);
+}
+
+.backend-status--online .dot {
+  background: var(--color-success);
+}
+
+.target {
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+}
+
+.target--ok {
+  color: var(--color-success);
+}
+
+.target--down {
+  color: var(--color-danger);
+}

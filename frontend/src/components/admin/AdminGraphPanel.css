@@ -1,0 +1,520 @@
+/* ---------------------------------------------------------------------------
+ * Admin Graph Panel — Neo4j Browser replica (always dark).
+ *
+ * This page forces the dark palette regardless of the app-wide theme toggle.
+ * ALL colors/spacing come from the token system (tokens.css admin-* vars).
+ * ------------------------------------------------------------------------- */
+.admin {
+  /* Full-bleed: negate the app-content padding so the panel spans the whole
+     main area edge-to-edge, like the real Neo4j Browser. */
+  margin: calc(var(--space-7) * -1) calc(var(--space-8) * -1);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: var(--font-body);
+}
+
+@media (max-width: 768px) {
+  .admin {
+    margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+    height: calc(100vh - 60px);
+  }
+}
+
+/* --- Top status bar ----------------------------------------------------- */
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--admin-border);
+  font-size: 12px;
+  color: var(--admin-text);
+}
+
+.admin-top-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+}
+
+.admin-top-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.admin-top-select {
+  cursor: pointer;
+}
+
+.admin-top-mono {
+  font-family: var(--font-mono-stat);
+  color: var(--admin-text);
+}
+
+.admin-top-aura {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--admin-accent);
+  text-decoration: none;
+}
+
+/* --- Body: rail + dbinfo + main ------------------------------------- */
+.admin-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.admin-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-2);
+  border-right: 1px solid var(--admin-border);
+}
+
+.admin-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+}
+
+.admin-rail-btn:hover {
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.admin-rail-btn--active {
+  color: var(--admin-accent);
+  background: var(--admin-surface);
+  box-shadow: inset 2px 0 0 var(--admin-accent);
+}
+
+/* --- Database information panel ---------------------------------------- */
+.admin-dbinfo {
+  width: 240px;
+  padding: var(--space-4);
+  border-right: 1px solid var(--admin-border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-dbinfo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.admin-icon-btn:hover {
+  color: var(--admin-text);
+  background: var(--admin-surface);
+}
+
+.admin-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-text-muted);
+  margin-top: var(--space-3);
+}
+
+.admin-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.admin-chip-row--muted .admin-chip {
+  background: transparent;
+  color: var(--admin-text);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+
+.admin-chip--plain {
+  font-family: var(--font-body);
+}
+
+.admin-chip--clickable {
+  border: 1px solid transparent !important;
+  cursor: pointer;
+  padding: 3px 9px;
+  font-weight: 500;
+  transition: filter var(--dur), transform var(--dur);
+}
+
+.admin-chip--clickable:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.admin-chip-row--muted .admin-chip.admin-chip--clickable {
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text);
+}
+
+.admin-chip-row--muted .admin-chip.admin-chip--clickable:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+.admin-showmore {
+  margin-top: var(--space-2);
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: var(--admin-accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-lastupdate {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  font-size: 11px;
+  color: var(--admin-text-muted);
+}
+
+/* --- Main query area ---------------------------------------------------- */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  overflow-y: auto;
+}
+
+.admin-querybar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--admin-query-bg);
+  border: 1px solid var(--admin-query-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+.admin-query-side {
+  color: var(--admin-text-muted);
+  margin-top: 2px;
+}
+
+.admin-query-input {
+  display: flex;
+  gap: var(--space-2);
+  flex: 1;
+  align-items: flex-start;
+}
+
+.admin-prompt {
+  color: var(--admin-text-muted);
+  font-family: var(--font-mono-stat);
+  font-size: 14px;
+}
+
+.admin-query-text {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--admin-text);
+  font-family: var(--font-mono-stat);
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 0;
+}
+
+.admin-run-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-top: 2px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--admin-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.admin-run-btn:hover {
+  filter: brightness(1.1);
+}
+
+.admin-running {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--admin-text-muted);
+}
+
+.admin-spin {
+  animation: admin-spin 1s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-examples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-example-btn {
+  text-align: left;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-family: var(--font-mono-stat);
+  font-size: 12px;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.admin-example-btn:hover {
+  border-color: var(--admin-accent);
+}
+
+/* --- Results (REPL stacked) --------------------------------------------- */
+.admin-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.admin-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-result-query {
+  font-family: var(--font-mono-stat);
+  font-size: 12px;
+  color: var(--admin-accent);
+}
+
+.admin-result-error {
+  color: var(--color-danger);
+  font-size: 13px;
+  padding: var(--space-3);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+}
+
+.admin-tabs {
+  display: flex;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-tab {
+  border: none;
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-size: 13px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.admin-tab--active {
+  color: var(--admin-text);
+  border-bottom-color: var(--admin-accent);
+}
+
+.admin-result-layout {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.admin-result-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--admin-text-muted);
+  font-size: 13px;
+  border: 1px dashed var(--admin-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Table tab */
+.admin-table-wrap {
+  overflow: auto;
+  max-height: 420px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-weight: 600;
+  font-family: var(--font-mono-stat);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--admin-border);
+  color: var(--admin-text);
+}
+
+.admin-table-idx {
+  width: 30px;
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-table-cell {
+  font-family: var(--font-mono-stat);
+  color: var(--node-evidence);
+}
+
+/* RAW tab */
+.admin-raw {
+  overflow: auto;
+  max-height: 420px;
+  padding: var(--space-3);
+  background: var(--admin-canvas-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono-stat);
+  font-size: 12px;
+  color: var(--admin-text);
+}
+
+.admin-result-footer {
+  font-size: 11px;
+  color: var(--admin-text-muted);
+}
+
+/* --- Results overview --------------------------------------------------- */
+.admin-overview {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-overview-head {
+  font-size: 13px;
+}
+
+.admin-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-overview-row {
+  display: flex;
+}
+
+/* --- Scribe embed ------------------------------------------------------- */
+.admin-scribe {
+  width: 320px;
+  flex-shrink: 0;
+  padding: var(--space-4);
+  border-left: 1px solid var(--admin-border);
+  overflow-y: auto;
+  background: var(--admin-surface);
+}
+
+.admin-scribe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.admin-scribe-toggle {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--admin-accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.admin-muted {
+  color: var(--admin-text-muted);
+  font-size: 12px;
+}

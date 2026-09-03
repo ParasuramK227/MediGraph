@@ -1,0 +1,202 @@
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.chat-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.chat-panel__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: var(--font-sm);
+}
+
+.chat-panel__spark {
+  color: var(--color-accent);
+}
+
+.chat-panel__filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.chat-panel__filter select {
+  font: inherit;
+  font-size: var(--font-xs);
+  padding: 3px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  max-width: 150px;
+}
+
+.chat-panel__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chat-panel--compact .chat-panel__scroll {
+  height: 320px;
+}
+
+.chat-panel__msg {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-panel__msg--user {
+  align-items: flex-end;
+}
+
+.chat-panel__msg--assistant {
+  align-items: flex-start;
+}
+
+.chat-panel__bubble {
+  max-width: 86%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text);
+}
+
+.chat-panel__msg--user .chat-panel__bubble {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.chat-panel__msg--assistant .chat-panel__bubble {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.chat-panel__bubble--error {
+  border-color: var(--color-danger) !important;
+  color: var(--color-danger) !important;
+}
+
+.chat-panel__bubble--typing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.chat-panel__spin {
+  animation: chat-spin 0.9s linear infinite;
+}
+
+@keyframes chat-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.chat-panel__empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+.chat-panel__empty p {
+  margin: 0;
+}
+
+.chat-panel__suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chat-panel__suggestions button {
+  font: inherit;
+  font-size: var(--font-xs);
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--dur);
+}
+
+.chat-panel__suggestions button:hover {
+  border-color: var(--color-accent);
+}
+
+.chat-panel__form {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.chat-panel__form input {
+  flex: 1;
+  font: inherit;
+  font-size: var(--font-sm);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.chat-panel__form input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.chat-panel__send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chat-panel__send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

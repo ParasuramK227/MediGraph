@@ -1,0 +1,51 @@
+.patient-detail__loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.patient-detail__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.patient-detail__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.patient-detail__muted {
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.patient-detail__grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 480px) 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.patient-detail__section-title {
+  font-size: var(--font-md);
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+}
+
+.patient-detail__graph {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .patient-detail__grid {
+    grid-template-columns: 1fr;
+  }
+}

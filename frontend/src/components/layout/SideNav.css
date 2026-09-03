@@ -1,0 +1,115 @@
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-4) var(--space-3);
+  overflow-y: auto;
+}
+
+.sidenav__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidenav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sidenav__logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.sidenav__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--color-text);
+}
+
+.sidenav__close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-nav-text);
+}
+
+.sidenav__close:hover {
+  background: var(--color-accent-soft);
+}
+
+.sidenav__section {
+  margin-bottom: var(--space-4);
+}
+
+.sidenav__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.sidenav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidenav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-nav-text);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.sidenav__link:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-nav-text-active);
+  text-decoration: none;
+}
+
+.sidenav__link--active {
+  background: var(--color-nav-active-bg);
+  color: var(--color-nav-text-active);
+}
+
+.sidenav__link-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .sidenav__close {
+    display: inline-flex;
+  }
+}

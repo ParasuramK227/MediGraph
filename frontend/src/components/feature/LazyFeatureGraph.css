@@ -1,0 +1,8 @@
+.lazy-fg {
+  border: 1px solid #33373e;
+  border-radius: var(--radius-md);
+  background: #000000;
+  padding: var(--space-8);
+  color: #8b9199;
+  text-align: center;
+}

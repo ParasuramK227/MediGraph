@@ -1,0 +1,40 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1200px;
+}
+
+.page__heading {
+  font-size: 28px;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.stat-card__label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.stat-card__value {
+  font-size: 28px;
+  color: var(--color-text);
+}
+
+.notfound-link {
+  align-self: flex-start;
+}

@@ -1,0 +1,44 @@
+.sector-view__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.sector-view__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.sector-view__sub {
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+  max-width: 56ch;
+}
+
+.sector-view__loading,
+.sector-view__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sector-view__spin {
+  animation: sector-spin 0.9s linear infinite;
+}
+
+@keyframes sector-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

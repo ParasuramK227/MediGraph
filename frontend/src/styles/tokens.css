@@ -1,0 +1,153 @@
+/* ---------------------------------------------------------------------------
+ * MediGraph design tokens — single source of truth for themes.
+ *
+ * Every font-family, color, radius, and spacing value must come from here.
+ * Components must NOT hardcode a font-family or hex color directly.
+ *
+ * Light theme lives in `:root`; the dark theme (Neo4j Browser-inspired)
+ * overrides the color variables under `[data-theme="dark"]`.
+ * The theme is switched by toggling the `data-theme` attribute on <html>.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* --- Fonts ---------------------------------------------------------- */
+  --font-heading: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono-stat: 'Departure Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* --- Radius ---------------------------------------------------------- */
+  --radius-base: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* --- Spacing scale --------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+
+  /* --- Type scale ------------------------------------------------------- */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-md: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+
+  /* --- Motion + elevation ---------------------------------------------- */
+  --dur: 140ms;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px var(--color-shadow);
+  --shadow-lg: 0 12px 28px var(--color-shadow);
+
+  /* --- Brand accent ---------------------------------------------------- */
+  /* PLACEHOLDER — pending design decision. Swap this single token to rebrand. */
+  --color-brand: #2f6df6;
+
+  /* --- Light theme ----------------------------------------------------- */
+  --color-bg: #ffffff;
+  --color-surface: #f7f8fa;
+  --color-surface-raised: #ffffff;
+  --color-border: #e3e6ea;
+  --color-text: #1a1d21;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #ffffff;
+  --color-accent: var(--color-brand);
+  --color-accent-soft: rgba(47, 109, 246, 0.12);
+  --color-accent-contrast: #ffffff;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-nav-bg: #f1f3f6;
+  --color-nav-text: #374151;
+  --color-nav-text-active: var(--color-brand);
+  --color-nav-active-bg: rgba(47, 109, 246, 0.1);
+  --color-shadow: rgba(0, 0, 0, 0.08);
+  --color-overlay: rgba(0, 0, 0, 0.4);
+
+  /* --- Neo4j-style graph node label colors ----------------------------
+     One fixed color per label, identical everywhere (DB info panel, graph
+     canvas, results overview). Palette follows the Neo4j Browser category
+     palette family mapping from the admin-panel style spec. ------------ */
+  --node-patient: #c9a46b; /* muted gold */
+  --node-disease: #5a7bb8; /* muted blue */
+  --node-symptom: #a99c6d; /* muted tan */
+  --node-medication: #5ca89a; /* muted teal */
+  --node-treatment: #c98fae; /* muted pink */
+  --node-doctor: #6aa7b1; /* muted cyan */
+  --node-hospital: #c07c9e; /* muted magenta */
+  --node-labtest: #9b8f73; /* muted tan */
+  --node-note: #9877b8; /* muted purple */
+  --node-clinicalstudy: #8e78b4; /* muted purple */
+  --node-evidence: #c9965a; /* muted orange */
+  --node-evidence2: #c2a451; /* muted amber */
+  --node-examination: #6da389; /* muted green */
+  --node-location: #6a9aa6; /* muted teal */
+  --node-default: #8f9499; /* gray */
+  --edge-color: #9aa0a6;
+  --edge-label: #c9cdd2;
+
+  /* --- Admin Graph Panel (always-dark Neo4j Browser replica) ---------- */
+  --admin-bg: #1a1d22; /* near-black, slightly warm-neutral (approx) */
+  --admin-canvas-bg: #000000; /* pure black canvas viewport */
+  --admin-surface: #22262c; /* one step lighter panels */
+  --admin-border: #33373e;
+  --admin-text: #dfe2e6;
+  --admin-text-muted: #8b9199;
+  --admin-text-inverse: #1a1d22;
+  --admin-accent: #2f6df6;
+  --admin-chip-text-dark: #1a1d22;
+  --admin-chip-text-light: #ffffff;
+  --admin-query-bg: #1a1d22;
+  --admin-query-border: #4a4f57;
+  --admin-ws: 12px;
+}
+
+/* --- Dark theme: modeled on the Neo4j Browser dark UI ------------------- */
+[data-theme='dark'] {
+  --color-bg: #0f1217;
+  --color-surface: #161a21;
+  --color-surface-raised: #1c2129;
+  --color-border: #2a303a;
+  --color-text: #e6e8eb;
+  --color-text-muted: #8b9199;
+  --color-text-inverse: #0f1217;
+  --color-accent: var(--color-brand);
+  --color-accent-soft: rgba(47, 109, 246, 0.2);
+  --color-accent-contrast: #ffffff;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-nav-bg: #11151b;
+  --color-nav-text: #c3c9d2;
+  --color-nav-text-active: #7ba1ff;
+  --color-nav-active-bg: rgba(47, 109, 246, 0.18);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+
+  --node-patient: #c9a46b;
+  --node-disease: #5a7bb8;
+  --node-symptom: #a99c6d;
+  --node-medication: #5ca89a;
+  --node-treatment: #c98fae;
+  --node-doctor: #6aa7b1;
+  --node-hospital: #c07c9e;
+  --node-labtest: #9b8f73;
+  --node-note: #9877b8;
+  --node-clinicalstudy: #8e78b4;
+  --node-evidence: #c9965a;
+  --node-evidence2: #c2a451;
+  --node-examination: #6da389;
+  --node-location: #6a9aa6;
+  --node-default: #7b8490;
+  --edge-color: #6d7683;
+  --edge-label: #8b9199;
+}

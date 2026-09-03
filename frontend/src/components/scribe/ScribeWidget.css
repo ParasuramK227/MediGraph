@@ -1,0 +1,228 @@
+.scribe-widget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  min-width: 0;
+}
+
+.scribe-widget-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.scribe-pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.scribe-pop--center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-6) 0;
+  color: var(--color-text-muted);
+}
+
+.scribe-pop--error {
+  background: var(--color-accent-soft);
+}
+.scribe-pop--error p {
+  color: var(--color-text);
+}
+
+.scribe-pop--idle {
+  padding: var(--space-3) 0;
+}
+
+.scribe-recording-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scribe-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  animation: scribe-blink 1s step-start infinite;
+}
+
+@keyframes scribe-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.scribe-rec-timer {
+  font-family: var(--font-mono-stat);
+  color: var(--color-text);
+}
+
+.scribe-visualizer {
+  width: 100%;
+  height: 80px;
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.scribe-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.scribe-textarea {
+  width: 100%;
+  resize: vertical;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.scribe-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.scribe-textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.scribe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.scribe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.scribe-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scribe-btn--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.scribe-btn--record {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.scribe-btn--stop {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.scribe-btn--secondary:hover {
+  background: var(--color-surface-raised);
+}
+
+.scribe-spin {
+  animation: scribe-spin 1s linear infinite;
+  color: var(--color-accent);
+}
+
+@keyframes scribe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scribe-note-muted {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.scribe-failure-count {
+  font-family: var(--font-mono-stat);
+  font-size: 12px;
+  color: var(--color-warning);
+}
+
+.scribe-saved-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scribe-success {
+  color: var(--color-success);
+}
+
+.scribe-warn {
+  color: var(--color-warning);
+}
+
+.scribe-error-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scribe-summary {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.scribe-sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.scribe-sec-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.scribe-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
+  font-size: 14px;
+}

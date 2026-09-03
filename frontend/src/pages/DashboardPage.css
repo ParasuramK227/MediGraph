@@ -1,0 +1,217 @@
+.dash-loading,
+.dash-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dash-error {
+  color: var(--color-danger, #d15b5b);
+}
+
+.dash-spin {
+  animation: dash-spin 0.9s linear infinite;
+}
+
+@keyframes dash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Stat cards: each gets a distinct color identity via --card-color ----- */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--card-color, var(--color-accent));
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur) ease, box-shadow var(--dur) ease, border-color var(--dur) ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--card-color, var(--color-accent));
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--card-color, var(--color-accent));
+  color: var(--card-contrast, var(--color-accent-contrast));
+  flex-shrink: 0;
+}
+
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stat-card__label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.stat-card__value {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--card-color, var(--color-text));
+}
+
+/* --- Trend panel ---------------------------------------------------------- */
+.dash-trend {
+  width: 100%;
+}
+
+.dash-trend__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dash-trend__axis {
+  font-size: var(--font-xs);
+}
+
+.dash-trend__value {
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.dash-trend__cap {
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+}
+
+/* --- Generic panels ------------------------------------------------------- */
+.dash-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  padding: var(--space-5);
+}
+
+.dash-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.dash-panel__icon {
+  color: var(--color-accent);
+}
+
+.dash-panel__title {
+  font-size: 16px;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+}
+
+.dash-notes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-note {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dash-note:last-child {
+  border-bottom: none;
+}
+
+.dash-note__name {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dash-note__name:hover {
+  text-decoration: underline;
+}
+
+.dash-note__date {
+  margin-left: var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.dash-note__summary {
+  margin-top: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dash-sectors {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dash-sector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  text-decoration: none;
+  transition: border-color var(--dur) ease, background var(--dur) ease;
+}
+
+.dash-sector:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.dash-sector__name {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.dash-sector__count {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+}
