@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   User, Loader2, FileText, Stethoscope, Microscope, ClipboardList,
-  Users, ArrowRight,
+  Users, ArrowRight, ShieldAlert, Calendar,
 } from 'lucide-react'
 import { fetchPatient, fetchPatientIntel, type Patient, type PatientIntel } from '../lib/api'
 import { fetchPatientGraphRaw, rawGraphToF } from '../lib/graphData'
 import { LazyFeatureGraph, type FEdge, type FNode } from '../components/feature/LazyFeatureGraph'
 import { ScribeWidget } from '../components/scribe/ScribeWidget'
+import { formatClinicalDate, cleanLabName, cleanPersonName } from '../lib/formatters'
 import './PatientDetailPage.css'
 
 export function PatientDetailPage() {
@@ -18,88 +19,65 @@ export function PatientDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setNotFound(false)
-    if (!id) {
-      setLoading(false)
-      return
-    }
+  const loadData = useCallback(() => {
+    if (!id) return
     fetchPatient(id)
       .then((p) => {
-        if (cancelled) return
         if (!p) {
           setNotFound(true)
-          setPatient(null)
-        } else {
-          setPatient(p)
+          return
         }
+        setPatient(p)
       })
       .catch(() => {
-        if (!cancelled) setNotFound(true)
+        setNotFound(true)
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        setLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
-  }, [id])
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
     fetchPatientIntel(id)
-      .then((d) => {
-        if (!cancelled) setIntel(d)
+      .then((i) => {
+        if (i) setIntel(i)
       })
-      .catch(() => {
-        if (!cancelled) setIntel(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [id])
+      .catch(() => {})
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
     fetchPatientGraphRaw(id)
       .then((raw) => {
-        if (!cancelled) setGraph(rawGraphToF(raw.nodes, raw.relationships))
+        if (raw) {
+          setGraph(rawGraphToF(raw.nodes, raw.relationships))
+        }
       })
-      .catch(() => {
-        if (!cancelled) setGraph(null)
-      })
-    return () => {
-      cancelled = true
-    }
+      .catch(() => {})
   }, [id])
+
+  useEffect(() => {
+    setLoading(true)
+    setNotFound(false)
+    loadData()
+  }, [loadData])
 
   if (loading) {
     return (
-      <div className="patient-detail page">
-        <div className="patient-detail__loading">
-          <Loader2 className="scribe-spin" size={22} />
-          Loading patient…
-        </div>
+      <div className="page page--centered">
+        <Loader2 className="patient-detail__spinner" size={28} />
       </div>
     )
   }
 
   if (notFound || !patient) {
     return (
-      <div className="patient-detail page">
+      <div className="page">
         <h1 className="page__heading">Patient not found</h1>
-        <p className="patient-detail__muted">
-          No patient exists with id “{id}”. The backend may be offline or the id is invalid.
-        </p>
+        <p className="patient-detail__muted">No record exists with ID {id}.</p>
+        <Link to="/patients" className="patient-detail__back">
+          ← Back to patients
+        </Link>
       </div>
     )
   }
 
-  const fullName = `${patient.first_name} ${patient.last_name}`.trim()
+  const fullName = cleanPersonName(`${patient.first_name} ${patient.last_name}`)
   const patientNodeId = graph?.nodes.find((n) => n.labels.includes('Patient'))?.id
   const history = intel?.medical_history
 
@@ -107,14 +85,15 @@ export function PatientDetailPage() {
     <div className="patient-detail page">
       <header className="patient-detail__head">
         <div className="patient-detail__avatar">
-          <User size={20} />
+          <User size={22} />
         </div>
         <div>
           <h1 className="page__heading">{fullName}</h1>
           <p className="patient-detail__muted">
-            {patient.id}
+            <span className="patient-detail__id-tag">{patient.id}</span>
+            {patient.date_of_birth ? ` • Born ${formatClinicalDate(patient.date_of_birth)}` : ''}
+            {patient.gender ? ` • ${patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : patient.gender}` : ''}
             {patient.email ? ` • ${patient.email}` : ''}
-            {patient.gender ? ` • ${patient.gender}` : ''}
           </p>
         </div>
         <Link
@@ -147,7 +126,7 @@ export function PatientDetailPage() {
               <div className="patient-detail__history">
                 {history?.diagnoses.length ? (
                   <div className="patient-detail__history-block">
-                    <div className="patient-detail__history-label">Diagnoses</div>
+                    <div className="patient-detail__history-label">Diagnoses ({history.diagnoses.length})</div>
                     <div className="patient-detail__chips">
                       {history.diagnoses.map((d) => (
                         <span className="patient-detail__chip patient-detail__chip--disease" key={d}>
@@ -161,13 +140,26 @@ export function PatientDetailPage() {
                 {history?.treatments.length ? (
                   <div className="patient-detail__history-block">
                     <div className="patient-detail__history-label">
-                      <Stethoscope size={13} /> Treatments
+                      <Stethoscope size={13} /> Treatments & Procedures ({history.treatments.length})
                     </div>
                     <ul className="patient-detail__list">
                       {history.treatments.map((t) => (
-                        <li key={t.id}>
-                          {t.type ?? 'Treatment'} — {t.date ?? 'n/a'}
-                          {t.cost ? ` (${t.cost})` : ''}
+                        <li key={t.id} className="patient-detail__item-row">
+                          <div className="patient-detail__item-main">
+                            <span className="patient-detail__item-title">{t.type ?? 'Treatment'}</span>
+                            {t.outcome && (
+                              <span className={`patient-detail__outcome-pill patient-detail__outcome-pill--${t.outcome.toLowerCase()}`}>
+                                {t.outcome}
+                              </span>
+                            )}
+                          </div>
+                          <div className="patient-detail__item-meta">
+                            {t.date && (
+                              <span className="patient-detail__date-badge">
+                                <Calendar size={12} /> {formatClinicalDate(t.date)}
+                              </span>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -177,16 +169,30 @@ export function PatientDetailPage() {
                 {history?.labs.length ? (
                   <div className="patient-detail__history-block">
                     <div className="patient-detail__history-label">
-                      <Microscope size={13} /> Lab tests
+                      <Microscope size={13} /> Lab Tests & Vitals ({history.labs.length})
                     </div>
                     <ul className="patient-detail__list">
                       {history.labs.map((l) => (
-                        <li key={l.id}>
-                          {l.name}: {l.result} {l.unit ?? ''}
-                          <span className={`patient-detail__lab-status patient-detail__lab-status--${(l.status || '').toLowerCase()}`}>
-                            {l.status}
-                          </span>
-                          {l.date ? ` — ${l.date}` : ''}
+                        <li key={l.id} className="patient-detail__item-row">
+                          <div className="patient-detail__item-main">
+                            <span className="patient-detail__item-title">{cleanLabName(l.name)}</span>
+                            <div className="patient-detail__lab-value">
+                              <strong>{l.result}</strong>
+                              <span className="patient-detail__unit">
+                                {l.unit ? l.unit.replace('{score}', '/ 10') : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="patient-detail__item-meta">
+                            <span className={`patient-detail__lab-status patient-detail__lab-status--${(l.status || 'normal').toLowerCase()}`}>
+                              {l.status || 'normal'}
+                            </span>
+                            {l.date && (
+                              <span className="patient-detail__date-badge">
+                                <Calendar size={12} /> {formatClinicalDate(l.date)}
+                              </span>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -200,14 +206,35 @@ export function PatientDetailPage() {
                     </div>
                     <ul className="patient-detail__list patient-detail__list--notes">
                       {history.notes.map((n) => (
-                        <li key={n.id}>
-                          <div className="patient-detail__note-title">
-                            {new Date(n.created_at).toLocaleDateString()}
+                        <li key={n.id} className="patient-detail__note-card">
+                          <div className="patient-detail__note-head">
+                            <span className="patient-detail__date-badge">
+                              <Calendar size={12} /> {formatClinicalDate(n.created_at)}
+                            </span>
+                            {n.title && <span className="patient-detail__note-title">{n.title}</span>}
                           </div>
-                          <div>{n.summary}</div>
+                          <div className="patient-detail__note-body">{n.summary}</div>
                         </li>
                       ))}
                     </ul>
+                  </div>
+                ) : null}
+
+                {history?.allergies && history.allergies.length ? (
+                  <div className="patient-detail__history-block">
+                    <div className="patient-detail__history-label">
+                      <ShieldAlert size={13} /> Recorded Allergies
+                    </div>
+                    <div className="patient-detail__chips">
+                      {history.allergies.map((a, i) => (
+                        <span
+                          className="patient-detail__chip patient-detail__chip--allergy"
+                          key={a.id || i}
+                        >
+                          {a.substance} {a.severity ? `(${a.severity})` : ''}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -242,14 +269,19 @@ export function PatientDetailPage() {
           </section>
 
           <section className="patient-detail__card">
-            <h2 className="patient-detail__section-title">Medications by diagnosis</h2>
+            <div className="patient-detail__card-head">
+              <h2 className="patient-detail__section-title">Medications by diagnosis</h2>
+              <p className="patient-detail__subtext">
+                Active medications indicated and prescribed to treat each of this patient's diagnosed conditions.
+              </p>
+            </div>
             {!intel || !Object.keys(intel.medications).length ? (
               <p className="patient-detail__muted">No matching medications in the graph.</p>
             ) : (
-              <ul className="patient-detail__similar">
+              <ul className="patient-detail__med-groups">
                 {Object.entries(intel.medications).map(([disease, meds]) => (
-                  <li key={disease}>
-                    <div className="patient-detail__history-label">{disease}</div>
+                  <li key={disease} className="patient-detail__med-group">
+                    <div className="patient-detail__med-disease-badge">{disease}</div>
                     <div className="patient-detail__chips">
                       {meds.map((m) => (
                         <span className="patient-detail__chip patient-detail__chip--med" key={m}>
@@ -266,17 +298,22 @@ export function PatientDetailPage() {
       </div>
 
       <section className="patient-detail__card patient-detail__scribe">
-        <ScribeWidget patientId={patient.id} />
+        <ScribeWidget patientId={patient.id} onNoteSaved={loadData} />
       </section>
 
       {graph && (
-        <section className="patient-detail__card">
-          <h2 className="patient-detail__section-title">Clinical graph</h2>
+        <section className="patient-detail__card patient-detail__card--graph">
+          <div className="patient-detail__card-head">
+            <h2 className="patient-detail__section-title">Clinical graph</h2>
+            <p className="patient-detail__subtext">
+              Interactive knowledge graph of this patient's care network. Click any node to inspect properties in the sidebar.
+            </p>
+          </div>
           <LazyFeatureGraph
             nodes={graph.nodes}
             edges={graph.edges}
             centerId={patientNodeId}
-            height={420}
+            height={600}
           />
         </section>
       )}

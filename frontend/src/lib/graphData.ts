@@ -1,3 +1,4 @@
+import { cleanPersonName } from './formatters'
 import type { CypherResult } from './api'
 import type { FEdge, FNode } from '../components/feature/FeatureGraph'
 
@@ -38,11 +39,14 @@ export function rawGraphToF(nodes: RawGraph['nodes'], rels: RawGraph['relationsh
 function pickDisplayName(prop: Record<string, unknown>, label: string): string {
   const nameCandidates = [
     'name',
+    'treatment_type',
+    'substance',
     'first_name',
     'drug_name',
     'disease_name',
     'treatment_name',
     'title',
+    'description',
     'notes',
     'note_id',
     'id',
@@ -52,7 +56,8 @@ function pickDisplayName(prop: Record<string, unknown>, label: string): string {
     if (typeof v === 'string' && v) {
       if (key === 'first_name') {
         const last = prop['last_name']
-        return typeof last === 'string' && last ? `${v} ${last}` : v
+        const raw = typeof last === 'string' && last ? `${v} ${last}` : v
+        return cleanPersonName(raw)
       }
       return v
     }

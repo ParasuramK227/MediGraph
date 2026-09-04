@@ -11,12 +11,18 @@
 export const LABEL_TO_TOKEN: Record<string, string> = {
   Patient: '--node-patient',
   Disease: '--node-disease',
+  Condition: '--node-disease',
   Symptom: '--node-symptom',
   Medication: '--node-medication',
   Treatment: '--node-treatment',
+  Procedure: '--node-treatment',
   Doctor: '--node-doctor',
+  Provider: '--node-doctor',
   Hospital: '--node-hospital',
   LabTest: '--node-labtest',
+  Observation: '--node-labtest',
+  Encounter: '--node-encounter',
+  Allergy: '--node-allergy',
   ConsultationNote: '--node-note',
   ClinicalStudy: '--node-clinicalstudy',
   Evidence: '--node-evidence',
@@ -28,12 +34,21 @@ export const LABEL_TO_TOKEN: Record<string, string> = {
 // accented token for the results-overview pills. Kept intentionally muted.
 export const REL_TO_TOKEN: Record<string, string> = {
   HAS_DIAGNOSIS: '--node-disease',
+  DIAGNOSED: '--node-disease',
   HAS_SYMPTOM: '--node-symptom',
   TREATS: '--node-medication',
+  PRESCRIBED: '--node-medication',
   RECEIVED_TREATMENT: '--node-treatment',
+  PERFORMED: '--node-treatment',
   HAS_CONSULTATION_NOTE: '--node-note',
+  MENTIONS_DIAGNOSIS: '--node-disease',
+  DISCUSSES_MEDICATION: '--node-medication',
   SIMILAR_TO: '--edge-color',
   HAS_LAB_TEST: '--node-labtest',
+  RECORDED: '--node-labtest',
+  HAD_ENCOUNTER: '--node-encounter',
+  CONDUCTED: '--node-doctor',
+  HAS_ALLERGY: '--node-allergy',
 }
 
 const DEFAULT_TOKEN = '--node-default'

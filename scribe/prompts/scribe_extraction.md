@@ -22,6 +22,7 @@ JSON. Return ONLY the JSON object, with no additional commentary.
 
 ```json
 {
+  "title": "short clinical title summarizing the consultation focus (e.g. Hypertension & Glycemic Follow-Up)",
   "summary": "a brief clinical summary of the consultation",
   "diagnoses": ["diagnosis or condition discussed"],
   "action_items": ["follow-up action for the patient or clinician"],

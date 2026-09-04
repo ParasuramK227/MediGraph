@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import uuid
 
@@ -185,13 +186,35 @@ def extract_note(session_id):
         return jsonify({"error": str(e), "status": "extract_error"}), 502
 
 
+def _clean_med_name(raw: str) -> str:
+    """Extract a clean medication name from free-text discussed strings."""
+    if not raw:
+        return ""
+    cleaned = re.split(
+        r"\b(?:\d+|mg|mcg|ml|daily|twice|once|oral|tablet|inhaler|capsule|for|as needed)\b",
+        raw,
+        flags=re.IGNORECASE,
+    )[0]
+    cleaned = cleaned.strip(" -:,;")
+    return cleaned.title() if cleaned else raw.strip().title()
+
+
+def _canonicalize_disease(session, raw_name: str) -> str:
+    """Resolve extracted disease name to existing canonical Disease node in Neo4j."""
+    cleaned = re.sub(r"\s*\((?:disorder|finding|situation|procedure)\)", "", raw_name, flags=re.IGNORECASE).strip()
+    rec = session.run(
+        "MATCH (d:Disease) WHERE toLower(d.name) = toLower($name) RETURN d.name AS name LIMIT 1",
+        name=cleaned,
+    ).single()
+    return rec["name"] if rec else cleaned.title()
+
+
 @scribe_bp.route("/save/<session_id>", methods=["POST"])
 def save_note(session_id):
-    """Persist the structured note into Neo4j as a ConsultationNote node
-    attached to the patient, then clear the session state.
+    """Persist the structured note into Neo4j as a connected ConsultationNote
+    attached to the patient, diagnosed diseases, discussed medications, and attending doctor.
 
-    Accepts a patient_id plus the note JSON. Requires that extraction has
-    already produced a staged note (status 'extracted').
+    Accepts a patient_id plus the note JSON.
     """
     data = request.get_json(silent=True) or {}
     patient_id = data.get("patient_id")
@@ -202,61 +225,103 @@ def save_note(session_id):
     if not note or not isinstance(note, dict):
         return jsonify({"error": "note must be a JSON object"}), 400
 
+    title = (note.get("title") or "").strip()
     summary = note.get("summary", "")
     diagnoses = note.get("diagnoses", []) or []
     action_items = note.get("action_items", []) or []
     meds = note.get("medications_discussed", []) or []
-    note_id = str(uuid.uuid4())
+    note_id = "CN-" + str(uuid.uuid4())[:8]
+
+    if not title:
+        if diagnoses and len(diagnoses) > 0:
+            title = f"{str(diagnoses[0]).title()} Consultation"
+        else:
+            title = "Clinical Consultation Note"
 
     try:
         with neo4j_get_session() as s:
-            result = s.run(
+            # 1. Create ConsultationNote and attach to Patient and attending Doctor
+            s.run(
                 """
                 MERGE (p:Patient {id: $patient_id})
                 CREATE (n:ConsultationNote {
                     id: $note_id,
+                    title: $title,
                     summary: $summary,
                     diagnoses: $diagnoses,
                     action_items: $action_items,
                     medications_discussed: $meds,
-                    created_at: datetime()
+                    created_at: datetime(),
+                    source: 'ai_scribe'
                 })
                 CREATE (p)-[:HAS_CONSULTATION_NOTE]->(n)
-                RETURN n.id AS note_id
+                WITH p, n
+                OPTIONAL MATCH (doc:Doctor)-[:TREATS]->(p)
+                FOREACH (_ IN CASE WHEN doc IS NOT NULL THEN [1] ELSE [] END |
+                    MERGE (doc)-[:CONDUCTED]->(n)
+                )
                 """,
                 patient_id=patient_id,
                 note_id=note_id,
+                title=title,
                 summary=summary,
                 diagnoses=diagnoses,
                 action_items=action_items,
                 meds=meds,
             )
-            record = result.single()
 
-        if record is None:
-            return jsonify({"error": f"Failed to attach note to patient {patient_id}"}), 500
-
-        # Feed diagnoses into Treatment Intelligence (per graph schema)
-        if diagnoses:
-            with neo4j_get_session() as s:
+            # 2. Canonicalize and link Diagnoses: (p)-[:HAS_DIAGNOSIS]->(d), (n)-[:MENTIONS_DIAGNOSIS]->(d)
+            canonical_diseases = []
+            for d in diagnoses:
+                if not d or not str(d).strip():
+                    continue
+                can_name = _canonicalize_disease(s, str(d))
+                canonical_diseases.append(can_name)
                 s.run(
                     """
                     MATCH (n:ConsultationNote {id: $note_id})
-                    MATCH (p:Patient)-[:HAS_CONSULTATION_NOTE]->(n)
-                    FOREACH (d in $diagnoses |
-                        MERGE (disease:Disease {name: d})
-                        MERGE (n)-[:HAS_DIAGNOSIS]->(disease)
-                        MERGE (p)-[:RECEIVED_TREATMENT {source: 'consultation', note_id: $note_id}]->(disease)
-                    )
+                    MATCH (p:Patient {id: $patient_id})
+                    MERGE (disease:Disease {name: $d_name})
+                    MERGE (n)-[:MENTIONS_DIAGNOSIS]->(disease)
+                    MERGE (n)-[:HAS_DIAGNOSIS]->(disease)
+                    MERGE (p)-[:HAS_DIAGNOSIS]->(disease)
                     """,
                     note_id=note_id,
-                    diagnoses=diagnoses,
+                    patient_id=patient_id,
+                    d_name=can_name,
+                )
+
+            # 3. Clean and link Medications: (n)-[:DISCUSSES_MEDICATION]->(m), (m)-[:TREATS]->(d)
+            for m in meds:
+                raw_m = m.get("name") if isinstance(m, dict) else str(m)
+                clean_m = _clean_med_name(raw_m)
+                if not clean_m:
+                    continue
+                s.run(
+                    """
+                    MATCH (n:ConsultationNote {id: $note_id})
+                    MERGE (med:Medication {name: $m_name})
+                    MERGE (n)-[:DISCUSSES_MEDICATION]->(med)
+                    WITH med
+                    UNWIND $diseases AS d_name
+                    MATCH (disease:Disease {name: d_name})
+                    MERGE (med)-[:TREATS]->(disease)
+                    """,
+                    note_id=note_id,
+                    m_name=clean_m,
+                    diseases=canonical_diseases,
                 )
 
         # Clear session store if active
         sess.clear(session_id)
 
-        return jsonify({"status": "saved", "note_id": note_id, "patient_id": patient_id}), 201
+        return jsonify({
+            "status": "saved",
+            "note_id": note_id,
+            "patient_id": patient_id,
+            "title": title,
+            "connected_diagnoses": canonical_diseases,
+        }), 201
     except Exception as e:
         import traceback
         traceback.print_exc()

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, Loader2, Mail, Phone } from 'lucide-react'
 import { fetchPatients, type Patient } from '../lib/api'
+import { cleanPersonName } from '../lib/formatters'
 import './PatientsPage.css'
 
 export function PatientsPage() {
@@ -53,7 +54,7 @@ export function PatientsPage() {
       {!loading && patients.length > 0 && (
         <div className="patients-page__list">
           {patients.map((p) => {
-            const name = `${p.first_name} ${p.last_name}`.trim()
+            const name = cleanPersonName(`${p.first_name} ${p.last_name}`)
             return (
               <Link key={p.id} className="patients-page__card" to={`/patients/${p.id}`}>
                 <div className="patients-page__avatar">

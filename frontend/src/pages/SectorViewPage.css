@@ -1,16 +1,20 @@
+.sector-page {
+  padding-bottom: var(--space-12);
+}
+
 .sector-view__header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .sector-view__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
   background: var(--color-accent-soft);
   color: var(--color-accent);
@@ -19,13 +23,121 @@
 .sector-view__sub {
   color: var(--color-text-muted);
   margin-top: var(--space-1);
-  max-width: 56ch;
+  font-size: var(--font-sm);
+  max-width: 64ch;
+}
+
+/* KPI Cards */
+.sector-intel__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.sector-kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.sector-kpi-card--highlight {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, var(--color-surface) 0%, rgba(59, 130, 246, 0.05) 100%);
+}
+
+.sector-kpi-card__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.sector-kpi-card__val {
+  font-size: var(--font-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.sector-kpi-card__val--sm {
+  font-size: var(--font-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-top: var(--space-1);
+}
+
+.sector-kpi-card__sub {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.sector-kpi-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.sector-tag {
+  font-size: 11px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  color: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+}
+
+/* Graph card */
+.sector-view__graph-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-8);
+  box-shadow: var(--shadow-sm);
+}
+
+.sector-view__graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sector-view__section-title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.sector-view__hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
 }
 
 .sector-view__loading,
 .sector-view__error {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   padding: var(--space-8);
   color: var(--color-text-muted);
@@ -42,3 +154,182 @@
     transform: rotate(360deg);
   }
 }
+
+/* Treatments Section */
+.sector-treatments-section {
+  margin-top: var(--space-8);
+}
+
+.sector-treatments-section__header {
+  margin-bottom: var(--space-5);
+}
+
+.sector-treatments-section__sub {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.sector-icon-gold {
+  color: #f59e0b;
+}
+
+.sector-treatments-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .sector-treatments-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sector-treatments-col {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.sector-col-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-accent);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sector-col-header h3 {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.sector-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sector-treatment-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color 0.15s ease;
+}
+
+.sector-treatment-card:hover {
+  border-color: var(--color-border-hover);
+}
+
+.sector-treatment-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.sector-treatment-card__name {
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.sector-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.sector-badge--rank {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.sector-badge--level {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.sector-badge--outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sector-treatment-card__bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sector-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.sector-bar {
+  height: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.sector-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+  border-radius: var(--radius-full);
+}
+
+.sector-treatment-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.sector-cost-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.sector-evidence-tag {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.sector-empty-card {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,152 @@
+.vis-graph-root {
+  position: relative;
+  width: 100%;
+  background: #0d1117;
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vis-graph-canvas {
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+/* Vis.js internal container styling */
+.vis-graph-canvas canvas {
+  outline: none;
+}
+
+/* Toolbar overlay */
+.vis-graph-toolbar {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.vis-tool-btn {
+  background: transparent;
+  border: none;
+  color: #c9d1d9;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--dur) ease;
+}
+
+.vis-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.vis-tool-btn--active {
+  background: rgba(47, 109, 246, 0.25);
+  color: #58a6ff;
+}
+
+.vis-tool-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 2px;
+}
+
+/* Search Box Overlay */
+.vis-search-box {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(22, 27, 34, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: var(--radius-base);
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  min-width: 280px;
+}
+
+.vis-search-icon {
+  color: #8b949e;
+}
+
+.vis-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: var(--font-xs);
+  flex: 1;
+}
+
+.vis-search-input::placeholder {
+  color: #6e7681;
+}
+
+.vis-search-clear {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.vis-search-match {
+  font-size: 0.6875rem;
+  background: rgba(63, 185, 80, 0.2);
+  color: #3fb950;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.vis-search-nomatch {
+  font-size: 0.6875rem;
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Graph metadata indicator */
+.vis-graph-meta {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(13, 17, 23, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-family: var(--font-mono-stat);
+  color: #8b949e;
+  z-index: 5;
+  pointer-events: none;
+}

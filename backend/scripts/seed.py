@@ -552,10 +552,20 @@ def seed_consultation_notes(driver):
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="Seed MediGraph AuraDB with demo data")
+    parser = argparse.ArgumentParser(description="Seed MediGraph AuraDB with demo or Synthea data")
+    parser.add_argument("--source", choices=["synthea", "legacy"], default="synthea",
+                        help="Data source to ingest (synthea or legacy, default: synthea)")
+    parser.add_argument("--limit-patients", type=int, default=60,
+                        help="Patient count limit for synthea ingestion (default 60)")
     parser.add_argument("--med-medications", type=int, default=250,
-                        help="max medication rows to ingest (default 250)")
+                        help="max medication rows to ingest for legacy seed (default 250)")
     args = parser.parse_args()
+
+    if args.source == "synthea":
+        from . import synthea_seeder
+        synthea_seeder.main()
+        return
+
     LIMIT["medications"] = args.med_medications
 
     uri = os.environ.get("NEO4J_URI")

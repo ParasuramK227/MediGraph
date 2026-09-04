@@ -2,7 +2,7 @@ import time
 
 from flask import Blueprint, request, jsonify
 
-from backend.analysis import graph_fetch
+from backend.analysis import graph_fetch, treatment_intel
 from backend.neo4j_connection import get_session as neo4j_get_session
 
 graph_bp = Blueprint("graph", __name__)
@@ -10,22 +10,44 @@ graph_bp = Blueprint("graph", __name__)
 _NODE_TO_KEYS = {
     "Patient": [
         "id", "first_name", "last_name", "gender", "date_of_birth",
-        "contact_number", "address", "email", "insurance_provider",
+        "contact_number", "address", "city", "state", "zip", "income",
+        "email", "insurance_provider",
     ],
-    "Disease": ["name"],
+    "Disease": ["name", "code"],
+    "Condition": ["name", "code"],
     "Symptom": ["name"],
-    "Treatment": ["id", "treatment_type", "description", "cost", "treatment_date"],
+    "Treatment": ["id", "treatment_type", "description", "cost", "treatment_date", "outcome", "success"],
+    "Procedure": ["id", "treatment_type", "description", "cost", "treatment_date", "outcome", "success"],
     "Medication": [
-        "name", "category", "dosage_form", "strength", "manufacturer",
+        "name", "code", "cost", "category", "dosage_form", "strength", "manufacturer",
         "indication", "classification",
     ],
     "Doctor": [
-        "id", "first_name", "last_name", "specialization", "years_experience",
+        "id", "name", "first_name", "last_name", "specialization", "years_experience",
         "hospital_branch", "email",
     ],
-    "LabTest": ["id", "name", "result", "unit", "reference_range", "status", "date"],
+    "Provider": [
+        "id", "name", "first_name", "last_name", "specialization", "years_experience",
+        "hospital_branch", "email",
+    ],
+    "LabTest": ["id", "name", "result", "unit", "reference_range", "status", "date", "category"],
+    "Observation": ["id", "name", "result", "unit", "reference_range", "status", "date", "category"],
+    "Encounter": ["id", "start", "stop", "encounter_class", "description", "cost", "reason"],
+    "Allergy": ["id", "substance", "type", "severity", "start"],
     "ConsultationNote": ["id", "title", "summary"],
 }
+
+
+def _clean_prop_val(v):
+    if hasattr(v, "iso_format"):
+        return v.iso_format()
+    if hasattr(v, "isoformat"):
+        return v.isoformat()
+    if isinstance(v, (list, tuple)):
+        return [_clean_prop_val(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _clean_prop_val(x) for k, x in v.items()}
+    return v
 
 
 def _serialize(graph):
@@ -33,7 +55,7 @@ def _serialize(graph):
     if graph is None:
         return None
 
-    items = dict(graph.items())
+    items = {k: _clean_prop_val(v) for k, v in dict(graph.items()).items()}
     labels = list(graph.labels) if hasattr(graph, "labels") else None
     type_ = graph.type if hasattr(graph, "type") else None
 
@@ -85,26 +107,86 @@ def get_patient(patient_id):
                 result2 = s.run(
                     """
                     MATCH (p:Patient {id: $id})
-                    OPTIONAL MATCH (p)-[r]-(n)
-                    RETURN n, r
+                    OPTIONAL MATCH (p)-[r_diag:HAS_DIAGNOSIS]->(d:Disease)
+                    OPTIONAL MATCH (m:Medication)-[r_med_treats:TREATS]->(d)
+                    OPTIONAL MATCH (p)-[r_treat:RECEIVED_TREATMENT]->(t:Treatment)
+                    OPTIONAL MATCH (t)-[r_proc_treats:TREATS]->(d)
+                    OPTIONAL MATCH (p)-[r_lab:HAS_LAB_TEST]->(l:LabTest)
+                    OPTIONAL MATCH (p)-[r_alg:HAS_ALLERGY]->(a:Allergy)
+                    OPTIONAL MATCH (doc:Doctor)-[r_doc:TREATS]->(p)
+                    OPTIONAL MATCH (p)-[r_note:HAS_CONSULTATION_NOTE]->(n:ConsultationNote)
+                    OPTIONAL MATCH (n)-[r_note_diag:MENTIONS_DIAGNOSIS|HAS_DIAGNOSIS]->(d_note:Disease)
+                    OPTIONAL MATCH (n)-[r_note_med:DISCUSSES_MEDICATION]->(m_note:Medication)
+                    OPTIONAL MATCH (doc_cond:Doctor)-[r_doc_cond:CONDUCTED]->(n)
+                    RETURN p,
+                           collect(DISTINCT d) AS diseases,
+                           collect(DISTINCT r_diag) AS r_diag,
+                           collect(DISTINCT m)[0..6] AS meds,
+                           collect(DISTINCT r_med_treats) AS r_med_treats,
+                           collect(DISTINCT t)[0..6] AS treatments,
+                           collect(DISTINCT r_treat)[0..6] AS r_treat,
+                           collect(DISTINCT r_proc_treats) AS r_proc_treats,
+                           collect(DISTINCT l)[0..6] AS labs,
+                           collect(DISTINCT r_lab)[0..6] AS r_labs,
+                           collect(DISTINCT a) AS allergies,
+                           collect(DISTINCT r_alg) AS r_alg,
+                           collect(DISTINCT doc)[0..2] AS doctors,
+                           collect(DISTINCT r_doc)[0..2] AS r_doc,
+                           collect(DISTINCT n)[0..5] AS notes,
+                           collect(DISTINCT r_note)[0..5] AS r_notes,
+                           collect(DISTINCT d_note) AS note_diseases,
+                           collect(DISTINCT r_note_diag) AS r_note_diags,
+                           collect(DISTINCT m_note) AS note_meds,
+                           collect(DISTINCT r_note_med) AS r_note_meds,
+                           collect(DISTINCT r_doc_cond) AS r_doc_cond
                     """,
                     id=patient_id,
                 )
-                node_map = {}
+                rec2 = result2.single()
+                node_map = {patient["element_id"]: patient}
                 edges = []
-                # seed with the patient itself
-                node_map[patient["element_id"]] = patient
-                for rec2 in result2:
-                    n = rec2["n"]
-                    r = rec2["r"]
-                    if n is not None and n.element_id not in node_map:
-                        node_map[n.element_id] = _serialize(n)
-                    if r is not None:
-                        edges.append({
-                            "start": r.start_node.element_id,
-                            "end": r.end_node.element_id,
-                            "type": r.type,
-                        })
+                if rec2:
+                    node_lists = [
+                        rec2["diseases"] or [],
+                        rec2["meds"] or [],
+                        rec2["treatments"] or [],
+                        rec2["labs"] or [],
+                        rec2["allergies"] or [],
+                        rec2["doctors"] or [],
+                        rec2["notes"] or [],
+                        rec2["note_diseases"] or [],
+                        rec2["note_meds"] or [],
+                    ]
+                    for group in node_lists:
+                        for n in group:
+                            if n is not None and n.element_id not in node_map:
+                                node_map[n.element_id] = _serialize(n)
+
+                    rel_lists = [
+                        rec2["r_diag"] or [],
+                        rec2["r_med_treats"] or [],
+                        rec2["r_treat"] or [],
+                        rec2["r_proc_treats"] or [],
+                        rec2["r_labs"] or [],
+                        rec2["r_alg"] or [],
+                        rec2["r_doc"] or [],
+                        rec2["r_notes"] or [],
+                        rec2["r_note_diags"] or [],
+                        rec2["r_note_meds"] or [],
+                        rec2["r_doc_cond"] or [],
+                    ]
+                    for r_group in rel_lists:
+                        for r in r_group:
+                            if r is not None:
+                                s_id = r.start_node.element_id
+                                e_id = r.end_node.element_id
+                                if s_id in node_map and e_id in node_map:
+                                    edges.append({
+                                        "start": s_id,
+                                        "end": e_id,
+                                        "type": r.type,
+                                    })
+
                 graph_data = {
                     "nodes": list(node_map.values()),
                     "relationships": edges,
@@ -191,7 +273,7 @@ def patient_intelligence(patient_id):
             data = graph_fetch.get_patient_intelligence(s, patient_id)
         if data is None:
             return jsonify({"error": f"patient {patient_id} not found"}), 404
-        return jsonify(data), 200
+        return jsonify(_clean_prop_val(data)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -208,9 +290,32 @@ def patient_treatment_intel(patient_id):
             data = graph_fetch.get_treatment_intel(s, patient_id)
         if data is None:
             return jsonify({"error": f"patient {patient_id} not found"}), 404
-        return jsonify(data), 200
+        return jsonify(_clean_prop_val(data)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@graph_bp.route("/sectors/<path:disease_name>/intelligence", methods=["GET"])
+def sector_treatment_intelligence(disease_name):
+    """Return cohort-level treatment intelligence for a disease.
+    
+    Answers 'What is the best treatment for a given disease?':
+    - Top indicated pharmacotherapies (medications) with efficacy and cost
+    - Top interventional clinical procedures with recovery rates
+    - Overall cohort biomarker control rate and monitored metrics
+    """
+    try:
+        # If the parameter has dashes from slugification, replace with spaces
+        name_clean = disease_name.replace("-", " ").strip()
+        with neo4j_get_session() as s:
+            data = treatment_intel.get_disease_treatment_intel(s, name_clean)
+        if data is None:
+            return jsonify({"error": f"Disease '{disease_name}' not found"}), 404
+        return jsonify(_clean_prop_val(data)), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 @graph_bp.route("/schema", methods=["GET"])

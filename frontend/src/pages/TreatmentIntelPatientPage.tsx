@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2, TrendingUp, Users, Pill } from 'lucide-react'
+import { ArrowLeft, Loader2, TrendingUp, Users, Pill, Share2, Sparkles, CheckCircle2 } from 'lucide-react'
 import { fetchTreatmentIntel, type TreatmentIntel } from '../lib/api'
+import { LazyFeatureGraph, type FEdge, type FNode } from '../components/feature/LazyFeatureGraph'
 import './TreatmentIntelPatientPage.css'
 
 export function TreatmentIntelPatientPage() {
@@ -33,6 +34,177 @@ export function TreatmentIntelPatientPage() {
       cancelled = true
     }
   }, [id])
+
+  // Build the patient pathway Vis.js network graph
+  const pathwayGraph = useMemo(() => {
+    if (!data) return { nodes: [], edges: [] }
+    const nodes: FNode[] = []
+    const edges: FEdge[] = []
+    const seenNodes = new Set<string>()
+    const seenEdges = new Set<string>()
+
+    // 1. Center Target Patient Node
+    const patientName = `${data.patient.first_name} ${data.patient.last_name}`.trim() || data.patient.id
+    nodes.push({
+      id: data.patient.id,
+      label: patientName,
+      labels: ['Patient'],
+      properties: {
+        id: data.patient.id,
+        name: patientName,
+        gender: data.patient.gender || 'Unknown',
+        diagnoses_count: data.diagnoses.length,
+        role: 'Target Patient',
+      },
+    })
+    seenNodes.add(data.patient.id)
+
+    // 2. Ranked Disease Nodes
+    data.ranked.forEach((r) => {
+      const dId = `disease_${r.disease.toLowerCase().replace(/\s+/g, '_')}`
+      if (!seenNodes.has(dId)) {
+        nodes.push({
+          id: dId,
+          label: r.disease,
+          labels: ['Disease'],
+          properties: {
+            disease_name: r.disease,
+            success_rank: `#${r.rank}`,
+            control_score: r.score.toFixed(2),
+            cohort_size: r.cohort_size,
+            cohort_controlled: r.patients_with_labs,
+            evidence: r.note,
+          },
+        })
+        seenNodes.add(dId)
+      }
+      const eId = `p_to_${dId}`
+      if (!seenEdges.has(eId)) {
+        edges.push({
+          id: eId,
+          source: data.patient.id,
+          target: dId,
+          label: `Rank #${r.rank} (${r.score.toFixed(2)})`,
+        })
+        seenEdges.add(eId)
+      }
+    })
+
+    // 3. Recommended Treatments / Medications
+    const treatmentList = data.treatments?.treatments || []
+    treatmentList.forEach((tr) => {
+      const tId = `treat_${tr.name.toLowerCase().replace(/\s+/g, '_')}`
+      const isMed =
+        tr.name.toLowerCase().includes('tablet') ||
+        tr.name.toLowerCase().includes('mg') ||
+        tr.name.toLowerCase().includes('injection') ||
+        tr.name.toLowerCase().includes('oral') ||
+        tr.name.toLowerCase().includes('metformin') ||
+        tr.name.toLowerCase().includes('potassium')
+
+      if (!seenNodes.has(tId)) {
+        nodes.push({
+          id: tId,
+          label: tr.name.length > 26 ? tr.name.slice(0, 24) + '…' : tr.name,
+          labels: isMed ? ['Medication'] : ['Treatment'],
+          properties: {
+            full_name: tr.name,
+            classification: isMed ? 'Pharmacotherapy (Medication)' : 'Clinical Procedure / Treatment',
+            indicated_disease: tr.disease,
+            success_rate: tr.success_rate != null ? `${Math.round(tr.success_rate * 100)}%` : 'Standard',
+            description: tr.description || '',
+          },
+        })
+        seenNodes.add(tId)
+      }
+
+      // Edge from Treatment to Disease
+      const dId = `disease_${tr.disease.toLowerCase().replace(/\s+/g, '_')}`
+      if (seenNodes.has(dId)) {
+        const edgeTD = `td_${tId}_${dId}`
+        if (!seenEdges.has(edgeTD)) {
+          edges.push({
+            id: edgeTD,
+            source: tId,
+            target: dId,
+            label: 'TREATS',
+          })
+          seenEdges.add(edgeTD)
+        }
+      }
+
+      // Edge from Patient to Treatment
+      const edgePT = `pt_${data.patient.id}_${tId}`
+      if (!seenEdges.has(edgePT)) {
+        edges.push({
+          id: edgePT,
+          source: data.patient.id,
+          target: tId,
+          label: tr.success_rate != null ? `${Math.round(tr.success_rate * 100)}% Success` : 'RECOMMENDED',
+        })
+        seenEdges.add(edgePT)
+      }
+
+      // Similar patients who recovered on this treatment
+      tr.recovered_patients.forEach((rec) => {
+        if (!seenNodes.has(rec.id)) {
+          nodes.push({
+            id: rec.id,
+            label: rec.name,
+            labels: ['Patient'],
+            properties: {
+              id: rec.id,
+              name: rec.name,
+              cohort_status: 'Recovered / Biomarker Controlled',
+              treatment_effective: tr.name,
+            },
+          })
+          seenNodes.add(rec.id)
+        }
+        const edgeRec = `rec_${rec.id}_${tId}`
+        if (!seenEdges.has(edgeRec)) {
+          edges.push({
+            id: edgeRec,
+            source: rec.id,
+            target: tId,
+            label: 'RECOVERED ON',
+          })
+          seenEdges.add(edgeRec)
+        }
+      })
+    })
+
+    // 4. Similar Patients (Top 4)
+    data.similar_patients.slice(0, 4).forEach((s) => {
+      if (!seenNodes.has(s.id)) {
+        nodes.push({
+          id: s.id,
+          label: s.name,
+          labels: ['Patient'],
+          properties: {
+            id: s.id,
+            name: s.name,
+            similarity: `${Math.round(s.similarity * 100)}%`,
+            shared_diagnoses: s.overlap,
+            cohort_type: 'Similar Cohort Patient',
+          },
+        })
+        seenNodes.add(s.id)
+      }
+      const edgeSim = `sim_${s.id}_${data.patient.id}`
+      if (!seenEdges.has(edgeSim)) {
+        edges.push({
+          id: edgeSim,
+          source: s.id,
+          target: data.patient.id,
+          label: `${Math.round(s.similarity * 100)}% Similar`,
+        })
+        seenEdges.add(edgeSim)
+      }
+    })
+
+    return { nodes, edges }
+  }, [data])
 
   if (loading) {
     return (
@@ -86,13 +258,43 @@ export function TreatmentIntelPatientPage() {
         <div>
           <h1 className="page__heading">{name}</h1>
           <p className="tii__muted">
-            Ranked diagnoses ({data.patient.id}) — by likelihood of success from similar
-            patients&apos; outcomes. Deterministic, no LLM.
+            Ranked diagnoses ({data.patient.id}) — scored by clinical biomarker control
+            and positive recovery outcomes across similar patient cohorts. Deterministic, no LLM.
           </p>
         </div>
       </header>
 
+      {/* Vis.js Interactive Pathway Graph */}
+      <section className="tii__graph-card">
+        <div className="tii__graph-header">
+          <div className="tii__graph-title">
+            <Share2 size={16} />
+            <span>Interactive Care & Treatment Pathway</span>
+          </div>
+          <span className="tii__graph-hint">
+            Click any node to view clinical properties and provenance
+          </span>
+        </div>
+        <div className="tii__graph-canvas">
+          <LazyFeatureGraph
+            nodes={pathwayGraph.nodes}
+            edges={pathwayGraph.edges}
+            centerId={data.patient.id}
+            height={480}
+          />
+        </div>
+      </section>
+
       <section className="tii__ranked">
+        <div className="tii__ranked-header">
+          <h2 className="tii__section-title">
+            <Sparkles size={16} /> Ranked Diagnoses by Biomarker Control
+          </h2>
+          <span className="tii__ranked-sub">
+            Rank 1 indicates the condition with highest verified therapeutic control in this cohort.
+          </span>
+        </div>
+
         {data.ranked.length === 0 && (
           <div className="tii__empty">This patient has no diagnoses to rank.</div>
         )}
@@ -114,7 +316,10 @@ export function TreatmentIntelPatientPage() {
                   </div>
                   <div className="tii__rank-note">{r.note}</div>
                 </div>
-                <div className="tii__rank-score">{r.score.toFixed(2)}</div>
+                <div className="tii__rank-score-wrap">
+                  <div className="tii__rank-score">{r.score.toFixed(2)}</div>
+                  <div className="tii__rank-score-label">Control Score</div>
+                </div>
               </div>
             </div>
           )
@@ -123,7 +328,7 @@ export function TreatmentIntelPatientPage() {
 
       <section className="tii__treatments">
         <h2 className="tii__section-title">
-          <Pill size={16} /> Recommended treatments
+          <Pill size={16} /> Recommended treatments & medications
         </h2>
         {!data.treatments ? (
           <p className="tii__muted">Treatment recommendations are not available.</p>
@@ -163,17 +368,17 @@ export function TreatmentIntelPatientPage() {
                       <div className="tii__treatment-meta">
                         {tr.success_rate != null && (
                           <span className="tii__treatment-rate">
-                            {Math.round(pct)}% success
+                            <CheckCircle2 size={13} style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
+                            {Math.round(pct)}% cohort efficacy
                           </span>
                         )}
-                        {tr.cost ? <span className="tii__treatment-cost">cost {tr.cost}</span> : null}
                         {tr.description ? (
                           <span className="tii__treatment-desc">{tr.description}</span>
                         ) : null}
                       </div>
                       {tr.recovered_patients.length > 0 && (
                         <div className="tii__treatment-recovered">
-                          <strong>Similar patients who recovered:</strong>{' '}
+                          <strong>Similar patients with controlled outcomes:</strong>{' '}
                           {tr.recovered_patients.map((r) => r.name).join(', ')}
                         </div>
                       )}
@@ -188,7 +393,7 @@ export function TreatmentIntelPatientPage() {
 
       <section className="tii__similar">
         <h2 className="tii__section-title">
-          <Users size={16} /> Similar patients
+          <Users size={16} /> Similar patients cohort
         </h2>
         {data.similar_patients.length === 0 ? (
           <p className="tii__muted">No similar patients found.</p>
@@ -211,3 +416,4 @@ export function TreatmentIntelPatientPage() {
     </div>
   )
 }
+

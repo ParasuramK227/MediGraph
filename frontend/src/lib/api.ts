@@ -1,3 +1,5 @@
+import { cleanPersonName } from './formatters'
+
 const API_BASE: string = import.meta.env.VITE_API_BASE ?? ''
 
 export interface HealthStatus {
@@ -158,8 +160,8 @@ function toPatient(raw: RawNode): Patient {
   }
   return {
     id: str('id') ?? raw.element_id ?? '',
-    first_name: str('first_name') ?? '',
-    last_name: str('last_name') ?? '',
+    first_name: cleanPersonName(str('first_name') ?? ''),
+    last_name: cleanPersonName(str('last_name') ?? ''),
     gender: str('gender'),
     date_of_birth: str('date_of_birth'),
     email: str('email'),
@@ -208,6 +210,7 @@ export interface PatientIntel {
       cost?: string
       date?: string
       description?: string
+      outcome?: string
     }>
     labs: Array<{
       id: string
@@ -219,11 +222,18 @@ export interface PatientIntel {
     }>
     notes: Array<{
       id: string
+      title?: string
       summary: string
       created_at: string
       diagnoses?: string[]
       medications?: string[]
       action_items?: string[]
+    }>
+    allergies?: Array<{
+      id?: string
+      substance?: string
+      type?: string
+      severity?: string
     }>
   }
   similar_patients: SimilarPatient[]
@@ -301,6 +311,48 @@ export async function fetchAllTreatmentIntel(): Promise<TreatmentIntel[]> {
   return results.filter((r): r is TreatmentIntel => r !== null)
 }
 
+export interface SectorMedication {
+  name: string
+  cost: string
+  raw_cost?: number
+  type: string
+  success_rate: number
+  recommendation_level: string
+  evidence_note: string
+}
+
+export interface SectorTreatment {
+  name: string
+  type: string
+  success_rate: number
+  cost: string
+  raw_cost?: number
+  outcome: string
+  total_cases: number
+  recommendation_level: string
+  evidence_note: string
+}
+
+export interface SectorIntelligence {
+  disease: string
+  total_patients: number
+  controlled_patients: number
+  control_rate: number
+  biomarkers_monitored: string[]
+  best_option: SectorMedication | SectorTreatment | null
+  medications: SectorMedication[]
+  treatments: SectorTreatment[]
+}
+
+export async function fetchSectorIntelligence(diseaseName: string): Promise<SectorIntelligence | null> {
+  const encoded = encodeURIComponent(diseaseName)
+  const res = await fetch(`${API_BASE}/api/graph/sectors/${encoded}/intelligence`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Failed to fetch sector intelligence: ${res.status}`)
+  return (await res.json()) as SectorIntelligence
+}
+
+
 // --- Graph schema + Cypher (admin panel) -------------------------------
 
 export interface LabelCount {
@@ -345,6 +397,28 @@ export async function runCypher(query: string, params: Record<string, unknown> =
 }
 
 // --- Chatbot --------------------------------------------------------------
+
+export interface ChatSuggestion {
+  category: string
+  prompt: string
+}
+
+export interface SuggestionsResponse {
+  mode?: 'patient' | 'cohort'
+  patient_id?: string
+  patient_name?: string
+  suggestions: ChatSuggestion[]
+  error?: string
+}
+
+export async function fetchChatSuggestions(patientId?: string): Promise<SuggestionsResponse> {
+  const url = patientId
+    ? `${API_BASE}/api/chat/suggestions?patient_id=${encodeURIComponent(patientId)}`
+    : `${API_BASE}/api/chat/suggestions`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch chat suggestions: ${res.status}`)
+  return (await res.json()) as SuggestionsResponse
+}
 
 export interface ChatResponse {
   answer?: string

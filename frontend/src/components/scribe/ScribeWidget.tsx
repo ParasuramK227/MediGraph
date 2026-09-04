@@ -36,6 +36,7 @@ type ScribeStage =
 
 interface Props {
   patientId: string
+  onNoteSaved?: () => void
 }
 
 // Downsample Float32 audio to 16,000 Hz 16-bit linear PCM required by AssemblyAI
@@ -76,7 +77,7 @@ function downsampleTo16kPCM(
   return result.buffer
 }
 
-export function ScribeWidget({ patientId }: Props) {
+export function ScribeWidget({ patientId, onNoteSaved }: Props) {
   const [stage, setStage] = useState<ScribeStage>('idle')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [transcript, setTranscript] = useState('')
@@ -458,12 +459,13 @@ export function ScribeWidget({ patientId }: Props) {
     try {
       await scribeSave(sessionId, patientId, savedNote)
       setSaveSuccess(true)
+      onNoteSaved?.()
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to persist the note to the graph.')
     } finally {
       setIsSaving(false)
     }
-  }, [sessionId, savedNote, patientId])
+  }, [sessionId, savedNote, patientId, onNoteSaved])
 
   const retry = useCallback(() => {
     setFailures((f) => f + 1)

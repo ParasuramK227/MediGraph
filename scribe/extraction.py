@@ -3,6 +3,9 @@ import os
 import re
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 _MODEL = "openai/gpt-oss-120b"
 
@@ -85,7 +88,7 @@ def _extract_json(text):
 def _validate(data):
     """Validate parsed JSON against the documented schema.
 
-    Returns a dict with exactly the schema keys. Raises ExtractionError on
+    Returns a dict with schema keys including title. Raises ExtractionError on
     any malformed/missing content rather than passing bad data through.
     """
     if not isinstance(data, dict):
@@ -99,7 +102,16 @@ def _validate(data):
         if not isinstance(data[key], list):
             raise ExtractionError(f"LLM output field '{key}' was not a list.")
 
+    title = data.get("title")
+    if not title or not isinstance(title, str) or not title.strip():
+        # Fallback title if LLM omitted it
+        if data["diagnoses"] and len(data["diagnoses"]) > 0:
+            title = f"{data['diagnoses'][0].title()} Consultation"
+        else:
+            title = "Clinical Consultation Note"
+
     return {
+        "title": title.strip(),
         "summary": data["summary"],
         "diagnoses": data["diagnoses"],
         "action_items": data["action_items"],

@@ -85,6 +85,8 @@
   --node-doctor: #6aa7b1; /* muted cyan */
   --node-hospital: #c07c9e; /* muted magenta */
   --node-labtest: #9b8f73; /* muted tan */
+  --node-encounter: #d97706; /* muted amber */
+  --node-allergy: #dc2626; /* muted coral */
   --node-note: #9877b8; /* muted purple */
   --node-clinicalstudy: #8e78b4; /* muted purple */
   --node-evidence: #c9965a; /* muted orange */
@@ -141,6 +143,8 @@
   --node-doctor: #6aa7b1;
   --node-hospital: #c07c9e;
   --node-labtest: #9b8f73;
+  --node-encounter: #d97706;
+  --node-allergy: #dc2626;
   --node-note: #9877b8;
   --node-clinicalstudy: #8e78b4;
   --node-evidence: #c9965a;

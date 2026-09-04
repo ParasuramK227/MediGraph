@@ -1,17 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Play, Loader2, Share2, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  Play,
+  Loader2,
+  Share2,
+  ChevronDown,
+  ChevronRight,
+  Network,
+  LayoutGrid,
+  Search,
+  X,
+  Download,
+  Sparkles,
+} from 'lucide-react'
 import { runCypher, fetchSchema, type GraphSchema } from '../lib/api'
 import { graphFromCypher } from '../lib/graphData'
 import { labelColor, chipTextContrast } from '../lib/graphColors'
-import type { FNode, FEdge } from '../components/feature/LazyFeatureGraph'
+import { LazyFeatureGraph, type FNode, type FEdge } from '../components/feature/LazyFeatureGraph'
 import './GraphExplorerPage.css'
 
 const PRESETS = [
-  { label: 'Patients + diagnoses', query: 'MATCH (p:Patient)-[:HAS_DIAGNOSIS]->(d:Disease) RETURN p, d LIMIT 200' },
-  { label: 'Medications → Diseases', query: 'MATCH (m:Medication)-[:TREATS]->(d:Disease) RETURN m, d LIMIT 200' },
-  { label: 'Doctors → Patients', query: 'MATCH (doc:Doctor)-[:TREATS]->(p:Patient) RETURN doc, p LIMIT 60' },
-  { label: 'Disease + symptoms', query: 'MATCH (d:Disease)-[:HAS_SYMPTOM]->(s:Symptom) RETURN d, s LIMIT 200' },
-  { label: 'Recent notes', query: 'MATCH (p:Patient)-[:HAS_CONSULTATION_NOTE]->(n:ConsultationNote) RETURN n, p LIMIT 40' },
+  { label: 'All Connected (Overview)', query: 'MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 150' },
+  { label: 'Patients + Active Diagnoses', query: 'MATCH (p:Patient)-[r:HAS_DIAGNOSIS]->(d:Disease) RETURN p, r, d LIMIT 120' },
+  { label: 'Medications → Diseases Treated', query: 'MATCH (m:Medication)-[r:TREATS]->(d:Disease) RETURN m, r, d LIMIT 120' },
+  { label: 'AI Scribe Notes & Diagnoses', query: 'MATCH (p:Patient)-[r:HAS_CONSULTATION_NOTE]->(n:ConsultationNote) OPTIONAL MATCH (n)-[m:MENTIONS_DIAGNOSIS]->(d:Disease) RETURN p, r, n, m, d LIMIT 50' },
+  { label: 'Abnormal Lab Biomarkers', query: 'MATCH (p:Patient)-[r:HAS_LAB_TEST]->(l:LabTest) WHERE toLower(l.status) = "abnormal" RETURN p, r, l LIMIT 80' },
+  { label: 'Clinical Treatments & Outcomes', query: 'MATCH (p:Patient)-[r:RECEIVED_TREATMENT]->(t:Treatment) RETURN p, r, t LIMIT 100' },
+  { label: 'Doctors → Consultations', query: 'MATCH (doc:Doctor)-[r1:CONDUCTED]->(n:ConsultationNote), (p:Patient)-[r2:HAS_CONSULTATION_NOTE]->(n) RETURN doc, r1, n, r2, p LIMIT 50' },
 ]
 
 // Properties we consider "identifying" (shown first / emphasised); everything
@@ -37,10 +51,12 @@ function primaryLabel(node: FNode): string {
 }
 
 export function GraphExplorerPage() {
-  const [query, setQuery] = useState('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 300')
+  const [query, setQuery] = useState('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 150')
   const [nodes, setNodes] = useState<FNode[]>([])
   const [edges, setEdges] = useState<FEdge[]>([])
   const [typeFilter, setTypeFilter] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'graph' | 'table'>('graph')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +103,7 @@ export function GraphExplorerPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    runCypher('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 300')
+    runCypher('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 150')
       .then((res) => {
         if (cancelled) return
         if (res.error) return
@@ -115,9 +131,27 @@ export function GraphExplorerPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1])
   }, [nodes])
 
-  const filtered = useMemo(
-    () => (typeFilter ? nodes.filter((n) => primaryLabel(n) === typeFilter) : nodes),
-    [nodes, typeFilter],
+  const filtered = useMemo(() => {
+    let list = nodes
+    if (typeFilter) {
+      list = list.filter((n) => primaryLabel(n) === typeFilter)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      list = list.filter((n) => {
+        const name = displayName(n).toLowerCase()
+        const id = n.id.toLowerCase()
+        const p = JSON.stringify(n.properties || {}).toLowerCase()
+        return name.includes(q) || id.includes(q) || p.includes(q)
+      })
+    }
+    return list
+  }, [nodes, typeFilter, searchQuery])
+
+  const filteredNodeIds = useMemo(() => new Set(filtered.map((n) => n.id)), [filtered])
+  const filteredEdges = useMemo(
+    () => edges.filter((e) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)),
+    [edges, filteredNodeIds],
   )
 
   const toggleExpanded = (id: string) => {
@@ -132,23 +166,53 @@ export function GraphExplorerPage() {
   const nodeRelationships = (id: string) =>
     edges.filter((e) => e.source === id || e.target === id)
 
+  const exportJson = () => {
+    const data = JSON.stringify({ nodes: filtered, edges: filteredEdges }, null, 2)
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `medigraph_export_${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportCsv = () => {
+    if (!filtered.length) return
+    const headers = ['id', 'name', 'type', 'properties']
+    const rows = filtered.map((n) => [
+      n.id,
+      `"${displayName(n).replace(/"/g, '""')}"`,
+      `"${primaryLabel(n).replace(/"/g, '""')}"`,
+      `"${JSON.stringify(n.properties || {}).replace(/"/g, '""')}"`,
+    ])
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `medigraph_nodes_${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="page">
+    <div className="page graph-explorer-page">
       <div className="graph-explorer__head">
         <div className="graph-explorer__icon">
-          <Share2 size={16} />
+          <Share2 size={18} />
         </div>
         <div>
-          <h1 className="page__heading">Knowledge Graph Browser</h1>
+          <h1 className="page__heading">Knowledge Graph Explorer</h1>
           <p className="graph-explorer__sub">
-            Explore the clinical graph as a filterable table — run a query or use a preset, then
-            filter by node type and expand any row to see its relationships.
+            Explore and visualize the clinical knowledge graph with real-time Cypher execution,
+            interactive 2D force-directed network graph, and structured inspection.
           </p>
           {schema && schema.relationship_count > 0 && (
             <div className="graph-explorer__rel-banner">
-              <span className="graph-explorer__rel-banner-label">Graph now has</span>
-              <strong>{schema.relationship_count.toLocaleString()}</strong>
-              <span>relationships</span>
+              <span className="graph-explorer__rel-banner-label">Active Graph:</span>
+              <strong>{schema.node_count.toLocaleString()}</strong> nodes •{' '}
+              <strong>{schema.relationship_count.toLocaleString()}</strong> relationships
               <span className="graph-explorer__rel-banner-chips">
                 {schema.relationships.slice(0, 7).map((r) => (
                   <span key={r.type} className="graph-explorer__rel-banner-chip">
@@ -168,6 +232,7 @@ export function GraphExplorerPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             rows={2}
+            placeholder="MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 150"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -178,13 +243,16 @@ export function GraphExplorerPage() {
           <button
             type="button"
             className="graph-explorer__run"
-            title="Run query (Ctrl/Cmd+Enter)"
+            title="Run Cypher query (Ctrl/Cmd+Enter)"
             onClick={() => void run(query)}
           >
-            <Play size={15} />
+            <Play size={16} />
           </button>
         </div>
         <div className="graph-explorer__presets">
+          <span className="graph-explorer__presets-title">
+            <Sparkles size={13} /> Presets:
+          </span>
           {PRESETS.map((p) => (
             <button
               key={p.label}
@@ -204,16 +272,78 @@ export function GraphExplorerPage() {
       <div className="graph-explorer__card card">
         {loading && (
           <div className="graph-explorer__state">
-            <Loader2 className="graph-explorer__spin" size={18} />
-            Running query…
+            <Loader2 className="graph-explorer__spin" size={20} />
+            Running graph query and streaming topology…
           </div>
         )}
-        {!loading && error && <div className="graph-explorer__state graph-explorer__state--error">{error}</div>}
+        {!loading && error && (
+          <div className="graph-explorer__state graph-explorer__state--error">{error}</div>
+        )}
         {!loading && !error && ran && nodes.length === 0 && (
-          <div className="graph-explorer__state">No nodes in this result.</div>
+          <div className="graph-explorer__state">No nodes found in this query result.</div>
         )}
         {!loading && !error && nodes.length > 0 && (
           <>
+            {/* Top Toolbar: View mode, Search, Export */}
+            <div className="graph-explorer__toolbar">
+              <div className="graph-explorer__view-switch">
+                <button
+                  type="button"
+                  className={`graph-explorer__switch-btn ${viewMode === 'graph' ? 'is-active' : ''}`}
+                  onClick={() => setViewMode('graph')}
+                >
+                  <Network size={15} /> Graph View
+                </button>
+                <button
+                  type="button"
+                  className={`graph-explorer__switch-btn ${viewMode === 'table' ? 'is-active' : ''}`}
+                  onClick={() => setViewMode('table')}
+                >
+                  <LayoutGrid size={15} /> Table View
+                </button>
+              </div>
+
+              <div className="graph-explorer__search-wrap">
+                <Search size={14} className="graph-explorer__search-icon" />
+                <input
+                  type="text"
+                  className="graph-explorer__search-field"
+                  placeholder="Filter nodes in result..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    className="graph-explorer__search-clear"
+                    onClick={() => setSearchQuery('')}
+                    title="Clear filter"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              <div className="graph-explorer__actions">
+                <button
+                  type="button"
+                  className="graph-explorer__export-btn"
+                  onClick={exportJson}
+                  title="Export graph as JSON"
+                >
+                  <Download size={13} /> JSON
+                </button>
+                <button
+                  type="button"
+                  className="graph-explorer__export-btn"
+                  onClick={exportCsv}
+                  title="Export nodes as CSV"
+                >
+                  <Download size={13} /> CSV
+                </button>
+              </div>
+            </div>
+
+            {/* Type filters */}
             <div className="graph-explorer__filters">
               <button
                 type="button"
@@ -237,6 +367,17 @@ export function GraphExplorerPage() {
                 </button>
               ))}
             </div>
+
+            {/* Content: Graph View or Table View */}
+            {viewMode === 'graph' ? (
+              <div className="graph-explorer__canvas-wrap">
+                <LazyFeatureGraph
+                  nodes={filtered}
+                  edges={filteredEdges}
+                  height={560}
+                />
+              </div>
+            ) : (
 
             <div className="graph-explorer__table">
               <div className="graph-explorer__row graph-explorer__row--head">
@@ -324,9 +465,11 @@ export function GraphExplorerPage() {
                 )
               })}
             </div>
+          )}
           </>
         )}
       </div>
     </div>
   )
 }
+

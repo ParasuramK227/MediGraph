@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FolderKanban, Loader2 } from 'lucide-react'
+import { FolderKanban, Loader2, Search, X } from 'lucide-react'
 import { runCypher } from '../lib/api'
 import './SectorsPage.css'
 
@@ -17,6 +17,7 @@ function slug(name: string): string {
 export function SectorsPage() {
   const [sectors, setSectors] = useState<SectorRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -49,13 +50,54 @@ export function SectorsPage() {
     }
   }, [])
 
+  const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return sectors
+    return sectors.filter((s) => s.name.toLowerCase().includes(q))
+  }, [sectors, searchQuery])
+
   return (
-    <div className="page">
-      <h1 className="page__heading">Sectors</h1>
-      <p className="sectors-page__sub">
-        Disease-focused cohorts. Select a sector to explore the patient&nbsp;network,
-        presenting symptoms, and indicated medications.
-      </p>
+    <div className="page sectors-page">
+      <div className="sectors-page__header-wrap">
+        <div>
+          <h1 className="page__heading">Sectors</h1>
+          <p className="sectors-page__sub">
+            Disease-focused cohorts. Select a sector to explore the patient network,
+            outcomes, and recommended treatments.
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="sectors-page__search-bar">
+          <Search size={16} className="sectors-page__search-icon" />
+          <input
+            type="text"
+            className="sectors-page__search-input"
+            placeholder="Search disease sectors (e.g. prediabetes, anemia)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              className="sectors-page__search-clear"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="sectors-page__meta-bar">
+        {!loading && (
+          <span className="sectors-page__count">
+            {searchQuery
+              ? `Showing ${filtered.length} of ${sectors.length} sectors matching "${searchQuery}"`
+              : `All ${sectors.length} disease cohorts`}
+          </span>
+        )}
+      </div>
 
       {loading && (
         <div className="sectors-page__loading">
@@ -68,8 +110,17 @@ export function SectorsPage() {
         <div className="sectors-page__loading">No sectors found.</div>
       )}
 
+      {!loading && sectors.length > 0 && filtered.length === 0 && (
+        <div className="sectors-page__loading">
+          No disease sectors found matching “{searchQuery}”.{' '}
+          <button className="sectors-page__reset-btn" onClick={() => setSearchQuery('')}>
+            Clear search
+          </button>
+        </div>
+      )}
+
       <div className="sectors-page__grid">
-        {sectors.map((s) => (
+        {filtered.map((s) => (
           <Link
             key={s.name}
             className="sectors-page__card"
@@ -90,4 +141,4 @@ export function SectorsPage() {
       </div>
     </div>
   )
-}
+}

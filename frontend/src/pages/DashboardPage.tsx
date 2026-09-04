@@ -196,6 +196,9 @@ export function DashboardPage() {
 
 /** Hand-rolled SVG XY line chart (no external chart lib; token colors only). */
 function TrendChart({ data }: { data: TrendPoint[] }) {
+  // Focus on the most recent 18 months of treatment data to maintain legibility
+  const chartData = data.length > 18 ? data.slice(-18) : data
+
   const W = 620
   const H = 260
   const padL = 36
@@ -207,14 +210,18 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
   const textColor = tokenColor('--color-text-muted')
   const valueColor = tokenColor('--color-text')
 
-  const max = Math.max(...data.map((d) => d.count), 1)
+  if (chartData.length === 0) {
+    return <p className="dash-empty">No treatment activity data recorded.</p>
+  }
+
+  const max = Math.max(...chartData.map((d) => d.count), 1)
   const plotW = W - padL - padR
   const plotH = H - padT - padB
-  const stepX = data.length > 1 ? plotW / (data.length - 1) : 0
+  const stepX = chartData.length > 1 ? plotW / (chartData.length - 1) : 0
   const x = (i: number) => padL + i * stepX
   const y = (v: number) => padT + plotH - (v / max) * plotH
 
-  const pts = data.map((d, i) => `${x(i).toFixed(1)},${y(d.count).toFixed(1)}`)
+  const pts = chartData.map((d, i) => `${x(i).toFixed(1)},${y(d.count).toFixed(1)}`)
   const line = pts.join(' ')
   // 4 horizontal gridlines.
   const gridCount = 4
@@ -224,13 +231,16 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
     return { yy, val: Math.round(val) }
   })
 
-  const areaPath = `M ${x(0)} ${y(0)} L ${line.split(' ').join(' L ')} L ${x(data.length - 1)} ${padT + plotH} Z`
+  const areaPath = `M ${x(0)} ${padT + plotH} L ${pts.join(' L ')} L ${x(chartData.length - 1)} ${padT + plotH} Z`
 
   const monthLabel = (k: string) => {
     const [y2, m] = k.split('-')
     const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return `${names[Number(m)]} ${y2.slice(2)}`
+    return `${names[Number(m)] || m} '${y2.slice(2)}`
   }
+
+  // Show at most 6 nicely spaced labels on the X-axis
+  const labelInterval = Math.max(1, Math.ceil(chartData.length / 6))
 
   return (
     <div className="dash-trend">
@@ -254,22 +264,36 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
         <path d={areaPath} fill="url(#dashTrendFill)" />
         <polyline points={line} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
-        {data.map((d, i) => (
-          <g key={d.month}>
-            <circle cx={x(i)} cy={y(d.count)} r={3.5} fill="#ffffff" stroke={lineColor} strokeWidth={2} />
-            {i % 2 === 0 && (
-              <text x={x(i)} y={y(d.count) - 9} textAnchor="middle" className="dash-trend__value" fill={valueColor}>
-                {d.count}
-              </text>
-            )}
-            <text x={x(i)} y={H - 8} textAnchor="middle" className="dash-trend__axis" fill={textColor}>
-              {monthLabel(d.month)}
-            </text>
-          </g>
-        ))}
+        {chartData.map((d, i) => {
+          const isKeyPoint = i % labelInterval === 0 || i === chartData.length - 1
+          return (
+            <g key={d.month}>
+              <circle
+                cx={x(i)}
+                cy={y(d.count)}
+                r={isKeyPoint ? 4 : 2.5}
+                fill="#ffffff"
+                stroke={lineColor}
+                strokeWidth={isKeyPoint ? 2 : 1.5}
+              >
+                <title>{`${d.month}: ${d.count} treatments`}</title>
+              </circle>
+              {isKeyPoint && (
+                <>
+                  <text x={x(i)} y={y(d.count) - 9} textAnchor="middle" className="dash-trend__value" fill={valueColor}>
+                    {d.count}
+                  </text>
+                  <text x={x(i)} y={H - 8} textAnchor="middle" className="dash-trend__axis" fill={textColor}>
+                    {monthLabel(d.month)}
+                  </text>
+                </>
+              )}
+            </g>
+          )
+        })}
       </svg>
       <p className="dash-trend__cap">
-        Treatments per month across {data[0]?.month?.slice(0, 4)} — {data.length} months.
+        Showing recent {chartData.length} months of treatment volume ({chartData[0]?.month} to {chartData[chartData.length - 1]?.month}).
       </p>
     </div>
   )
