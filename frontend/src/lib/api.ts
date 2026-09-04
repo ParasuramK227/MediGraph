@@ -45,6 +45,23 @@ export async function scribeStart(): Promise<{ session_id: string }> {
   return res.json()
 }
 
+export async function scribeGetToken(): Promise<{ token?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/scribe/token`)
+  return res.json()
+}
+
+export async function scribeTranslate(
+  text: string,
+  targetLang = 'English',
+): Promise<{ translated_text?: string; original_text?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/scribe/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, target_lang: targetLang }),
+  })
+  return res.json()
+}
+
 export interface UploadResult {
   session_id: string
   transcript?: string
@@ -107,8 +124,9 @@ export async function scribeSave(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patient_id: patientId, note }),
   })
-  if (!res.ok) throw new Error(`Failed to save note: ${res.status}`)
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `Failed to save note: ${res.status}`)
+  return data
 }
 
 export interface Patient {

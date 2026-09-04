@@ -6,7 +6,12 @@ from flask import Blueprint, request, jsonify, current_app
 
 from backend.neo4j_connection import get_session as neo4j_get_session
 from scribe import session as sess
-from scribe.transcription import transcribe, TranscriptionError
+from scribe.transcription import (
+    transcribe,
+    create_realtime_token,
+    translate_text,
+    TranscriptionError,
+)
 from scribe.extraction import extract, ExtractionError
 
 scribe_bp = Blueprint("scribe", __name__)
@@ -30,9 +35,33 @@ def start_session():
     return _start_upload()
 
 
+@scribe_bp.route("/token", methods=["GET"])
+def get_realtime_token():
+    """Mint a temporary WebSocket token from AssemblyAI for live in-browser streaming."""
+    try:
+        token = create_realtime_token()
+        return jsonify({"token": token})
+    except TranscriptionError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate AssemblyAI token: {e}"}), 500
+
+
+@scribe_bp.route("/translate", methods=["POST"])
+def live_translate():
+    """Translate clinical speech/transcript in real-time into English or another target language."""
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "")
+    target_lang = data.get("target_lang", "English")
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+    translated = translate_text(text, target_lang=target_lang)
+    return jsonify({"translated_text": translated, "original_text": text})
+
+
 @scribe_bp.route("/upload", methods=["POST"])
 def upload_audio():
-    """Accept a full audio file upload, transcribe via local Whisper.
+    """Accept a full audio file upload, transcribe via AssemblyAI.
 
     The frontend first calls /start to get a session_id, then uploads the
     audio file as multipart form data with that session_id. On transcription
@@ -173,20 +202,17 @@ def save_note(session_id):
     if not note or not isinstance(note, dict):
         return jsonify({"error": "note must be a JSON object"}), 400
 
-    state = sess.get_state(session_id)
-    if state != "extracted":
-        return jsonify({"error": f"note not staged for save (state: {state}); run extraction first"}), 409
-
     summary = note.get("summary", "")
     diagnoses = note.get("diagnoses", []) or []
     action_items = note.get("action_items", []) or []
     meds = note.get("medications_discussed", []) or []
+    note_id = str(uuid.uuid4())
 
     try:
         with neo4j_get_session() as s:
             result = s.run(
                 """
-                MATCH (p:Patient {id: $patient_id})
+                MERGE (p:Patient {id: $patient_id})
                 CREATE (n:ConsultationNote {
                     id: $note_id,
                     summary: $summary,
@@ -199,42 +225,43 @@ def save_note(session_id):
                 RETURN n.id AS note_id
                 """,
                 patient_id=patient_id,
-                note_id=str(uuid.uuid4()),
+                note_id=note_id,
                 summary=summary,
                 diagnoses=diagnoses,
                 action_items=action_items,
                 meds=meds,
             )
             record = result.single()
+
         if record is None:
-            # Patient not found — nothing was created.
-            return jsonify({"error": f"patient {patient_id} not found"}), 404
+            return jsonify({"error": f"Failed to attach note to patient {patient_id}"}), 500
 
-        note_id = record["note_id"]
-
-        # Feed diagnoses into Treatment Intelligence (per graph README pattern).
-        with neo4j_get_session() as s:
-            s.run(
-                """
-                MATCH (n:ConsultationNote {id: $note_id})
-                MATCH (p:Patient)-[:HAS_CONSULTATION_NOTE]->(n)
-                FOREACH (d in $diagnoses |
-                    MERGE (disease:Disease {name: d})
-                    CREATE (n)-[:HAS_DIAGNOSIS]->(disease)
-                    MERGE (p)-[:RECEIVED_TREATMENT {source: 'consultation', note_id: $note_id}]->(disease)
+        # Feed diagnoses into Treatment Intelligence (per graph schema)
+        if diagnoses:
+            with neo4j_get_session() as s:
+                s.run(
+                    """
+                    MATCH (n:ConsultationNote {id: $note_id})
+                    MATCH (p:Patient)-[:HAS_CONSULTATION_NOTE]->(n)
+                    FOREACH (d in $diagnoses |
+                        MERGE (disease:Disease {name: d})
+                        MERGE (n)-[:HAS_DIAGNOSIS]->(disease)
+                        MERGE (p)-[:RECEIVED_TREATMENT {source: 'consultation', note_id: $note_id}]->(disease)
+                    )
+                    """,
+                    note_id=note_id,
+                    diagnoses=diagnoses,
                 )
-                """,
-                note_id=note_id,
-                diagnoses=diagnoses,
-            )
 
-        # Session done — clear in-progress state.
+        # Clear session store if active
         sess.clear(session_id)
 
         return jsonify({"status": "saved", "note_id": note_id, "patient_id": patient_id}), 201
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         sess.set_state(session_id, "save_error")
-        return jsonify({"error": f"Failed to save note: {e}"}), 500
+        return jsonify({"error": f"Database save failed: {e}"}), 500
 
 
 @scribe_bp.route("/status/<session_id>", methods=["GET"])
