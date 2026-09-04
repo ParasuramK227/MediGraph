@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Play, Loader2, Share2, ChevronDown, ChevronRight } from 'lucide-react'
-import { runCypher } from '../lib/api'
+import { runCypher, fetchSchema, type GraphSchema } from '../lib/api'
 import { graphFromCypher } from '../lib/graphData'
 import { labelColor, chipTextContrast } from '../lib/graphColors'
 import type { FNode, FEdge } from '../components/feature/LazyFeatureGraph'
@@ -37,7 +37,7 @@ function primaryLabel(node: FNode): string {
 }
 
 export function GraphExplorerPage() {
-  const [query, setQuery] = useState('MATCH (n) RETURN n LIMIT 200')
+  const [query, setQuery] = useState('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 300')
   const [nodes, setNodes] = useState<FNode[]>([])
   const [edges, setEdges] = useState<FEdge[]>([])
   const [typeFilter, setTypeFilter] = useState<string>('')
@@ -45,6 +45,19 @@ export function GraphExplorerPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ran, setRan] = useState(false)
+  const [schema, setSchema] = useState<GraphSchema | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSchema()
+      .then((s) => {
+        if (!cancelled) setSchema(s)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const run = async (q: string) => {
     setLoading(true)
@@ -74,7 +87,7 @@ export function GraphExplorerPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    runCypher('MATCH (n) RETURN n LIMIT 200')
+    runCypher('MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 300')
       .then((res) => {
         if (cancelled) return
         if (res.error) return
@@ -131,6 +144,20 @@ export function GraphExplorerPage() {
             Explore the clinical graph as a filterable table — run a query or use a preset, then
             filter by node type and expand any row to see its relationships.
           </p>
+          {schema && schema.relationship_count > 0 && (
+            <div className="graph-explorer__rel-banner">
+              <span className="graph-explorer__rel-banner-label">Graph now has</span>
+              <strong>{schema.relationship_count.toLocaleString()}</strong>
+              <span>relationships</span>
+              <span className="graph-explorer__rel-banner-chips">
+                {schema.relationships.slice(0, 7).map((r) => (
+                  <span key={r.type} className="graph-explorer__rel-banner-chip">
+                    {r.type} ({r.count.toLocaleString()})
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

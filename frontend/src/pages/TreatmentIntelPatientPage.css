@@ -216,3 +216,115 @@
   color: var(--color-text-muted);
   white-space: nowrap;
 }
+
+.tii__treatments {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.tii__treatments-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
+  line-height: 1.5;
+}
+
+.tii__treatment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tii__treatment {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+}
+
+.tii__treatment-rail {
+  display: flex;
+  align-items: flex-start;
+}
+
+.tii__treatment-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--node-treatment) 25%, transparent);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: var(--font-sm);
+  flex-shrink: 0;
+}
+
+.tii__treatment-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tii__treatment-name {
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.tii__treatment-disease {
+  font-size: var(--font-xs);
+  font-weight: 400;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-2);
+}
+
+.tii__treatment-rate-na {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.tii__treatment-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+}
+
+.tii__treatment-rate {
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.tii__treatment-recovered {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.5;
+}
+
+.tii__treatment-recovered strong {
+  color: var(--color-text);
+}

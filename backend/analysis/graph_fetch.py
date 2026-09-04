@@ -151,6 +151,78 @@ def fetch_medications_for_diseases(
     return {r["disease"]: (r.get("meds") or []) for r in rows}
 
 
+def fetch_treatments_for_diseases(
+    session, names: List[str]
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Map disease name -> list of Treatment nodes that TREAT it.
+
+    Uses the (Treatment)-[:TREATS]->(Disease) relationship. Treatment may carry
+    an 'outcome' property ('resolved'/'cured'/'improved'/...) and an optional
+    'success' rate (0..1). Returns an empty map when no edges exist yet, so
+    callers can degrade gracefully without outcome data.
+    """
+    if not names:
+        return {}
+    rows = _rows(
+        session,
+        """
+        MATCH (t:Treatment)-[:TREATS]->(d:Disease)
+        WHERE d.name IN $names
+        RETURN d.name AS disease,
+               collect(DISTINCT {id: t.id, name: t.treatment_type,
+                                 treatment_type: t.treatment_type,
+                                 cost: t.cost, description: t.description,
+                                 outcome: t.outcome, success: t.success}) AS treatments
+        """,
+        names=list(names),
+    )
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for r in rows:
+        disease = r.get("disease")
+        if not disease:
+            continue
+        treats = [t for t in (r.get("treatments") or []) if t.get("id") or t.get("name")]
+        out[disease] = treats
+    return out
+
+
+def fetch_patient_treatments(session, patient_ids: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+    """Fetch RECEIVED_TREATMENT records for a set of patients, keyed by id.
+
+    Each treatment record carries the treatment's name/type, cost and any
+    'outcome'/'success' fields, so recovery can be attributed to a treatment.
+    """
+    if not patient_ids:
+        return {}
+    rows = _rows(
+        session,
+        """
+        MATCH (p:Patient)-[:RECEIVED_TREATMENT]->(t:Treatment)
+        WHERE p.id IN $ids
+        RETURN p.id AS pid, t.id AS id, t.treatment_type AS name,
+               t.treatment_type AS treatment_type, t.cost AS cost,
+               t.description AS description, t.outcome AS outcome,
+               t.success AS success
+        """,
+        ids=list(patient_ids),
+    )
+    treats_by_patient: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for r in rows:
+        pid = r.get("pid")
+        if not pid:
+            continue
+        treats_by_patient[pid].append({
+            "id": r.get("id"),
+            "name": r.get("name"),
+            "treatment_type": r.get("treatment_type"),
+            "cost": r.get("cost"),
+            "description": r.get("description"),
+            "outcome": r.get("outcome"),
+            "success": r.get("success"),
+        })
+    return dict(treats_by_patient)
+
+
 def get_patient_intelligence(session, patient_id: str) -> Optional[Dict[str, Any]]:
     """Enriched summary for the patient detail page.
 
@@ -189,6 +261,19 @@ def get_patient_intelligence(session, patient_id: str) -> Optional[Dict[str, Any
     # Deterministic summary from the patient's own notes + diagnoses
     summary = _build_summary(target)
 
+    similar_out = [
+        {
+            "id": s.get("id"),
+            "patient_id": s.get("id"),
+            "name": ((s.get("first_name") or "") + " " + (s.get("last_name") or "")).strip(),
+            "gender": s.get("gender"),
+            "similarity": s.get("similarity"),
+            "overlap": s.get("overlap"),
+            "shared_diagnoses": s.get("shared_diagnoses") or [],
+        }
+        for s in similar
+    ]
+
     return {
         "patient": {
             "id": target["id"],
@@ -203,7 +288,7 @@ def get_patient_intelligence(session, patient_id: str) -> Optional[Dict[str, Any
         },
         "summary": summary,
         "medical_history": medical_history,
-        "similar_patients": similar,
+        "similar_patients": similar_out,
         "medications": medications,
     }
 
@@ -227,6 +312,43 @@ def get_treatment_intel(session, patient_id: str) -> Optional[Dict[str, Any]]:
 
     ranked = treatment_intel.rank_diagnoses(target, similar)
 
+    # --- Ranked treatments (recommended therapy) with success + recovery ---
+    targets_diags = target.get("diagnoses") or []
+    treatments_by_disease = fetch_treatments_for_diseases(session, targets_diags)
+
+    # Attribute recovery to a treatment for similar patients: a similar patient
+    # is "recovered on treatment T" when they received T and T carried a
+    # positive outcome. Empty today until outcome data is added, but wired.
+    recovered_patients_by_treatment: Dict[str, List[Dict[str, Any]]] = {}
+    if treatments_by_disease and similar:
+        sim_treatments = fetch_patient_treatments(session, sim_ids)
+        for s in similar:
+            pid = s.get("id")
+            for rec in sim_treatments.get(pid, []):
+                if treatment_intel._treatment_success(rec) != 1.0:
+                    continue
+                # match by treatment name/id across this patient's diagnoses
+                name = rec.get("name")
+                tid = rec.get("id")
+                matched = any(
+                    name and t.get("name") == name or (tid and t.get("id") == tid)
+                    for treats in treatments_by_disease.values()
+                    for t in treats
+                )
+                if not matched:
+                    continue
+                entry = {"id": pid, "name": ((s.get("first_name") or "") + " " + (s.get("last_name") or "")).strip()}
+                # key recovery buckets by treatment *name* so they attach to the
+                # deduplicated treatment entry regardless of which treatment-node
+                # id won (several nodes can share a name, e.g. "X-Ray").
+                bucket = recovered_patients_by_treatment.setdefault(name or "", [])
+                if entry not in bucket:
+                    bucket.append(entry)
+
+    treatments = treatment_intel.rank_treatments(
+        target, treatments_by_disease, recovered_patients_by_treatment, top=5
+    )
+
     return {
         "patient": {
             "id": target["id"],
@@ -234,8 +356,10 @@ def get_treatment_intel(session, patient_id: str) -> Optional[Dict[str, Any]]:
             "last_name": target["last_name"],
             "gender": target.get("gender"),
         },
-        "diagnoses": target.get("diagnoses") or [],
+        "diagnoses": targets_diags,
         "ranked": ranked,
+        "treatments": treatments,
+        "recovered_patients_by_treatment": recovered_patients_by_treatment,
         "similar_patients": [
             {"id": s.get("id"), "name": (s.get("first_name") or "") + " " + (s.get("last_name") or ""),
              "similarity": s.get("similarity"), "overlap": s.get("overlap")}

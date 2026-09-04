@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import cytoscape, { type ElementDefinition } from 'cytoscape'
-import { ZoomIn, ZoomOut, Maximize2, Sparkles, Search } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Sparkles, Search, X } from 'lucide-react'
 import { labelColor, relColor, chipTextContrast } from '../../lib/graphColors'
 import './GraphCanvas.css'
 
@@ -32,6 +32,18 @@ function nodeDisplay(n: GraphNodeData): string {
   return (n.labels[0] ?? 'node') + ' ' + (n.id ?? '').slice(0, 5)
 }
 
+/** Detail properties for the popover, top 8 non-generic keys. */
+function popoverLines(n: GraphNodeData): Array<[string, string]> {
+  const skip = new Set(['id', 'element_id'])
+  const lines: Array<[string, string]> = []
+  for (const [k, v] of Object.entries(n.properties)) {
+    if (skip.has(k)) continue
+    const s = typeof v === 'string' ? v : JSON.stringify(v)
+    if (s && lines.length < 8) lines.push([k, s])
+  }
+  return lines
+}
+
 /** Build cytoscape element definitions. */
 function buildElements(nodes: GraphNodeData[], edges: GraphEdgeData[]): ElementDefinition[] {
   const elements: ElementDefinition[] = nodes.map((n) => {
@@ -43,6 +55,8 @@ function buildElements(nodes: GraphNodeData[], edges: GraphEdgeData[]): ElementD
         label: nodeDisplay(n),
         color,
         textColor: chipTextContrast(color) === 'light' ? '#ffffff' : '#111111',
+        _labels: n.labels,
+        _props: n.properties,
       },
       classes: 'node',
     }
@@ -67,6 +81,7 @@ export function GraphCanvas({ nodes, edges }: Props) {
   const cyRef = useRef<cytoscape.Core | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selected, setSelected] = useState<GraphNodeData | null>(null)
 
   const matchId = (() => {
     const t = searchQuery.trim().toLowerCase()
@@ -169,6 +184,17 @@ export function GraphCanvas({ nodes, edges }: Props) {
     })
 
     cyRef.current = cy
+    cy.on('tap', 'node', (evt) => {
+      const el = evt.target
+      setSelected({
+        id: el.id(),
+        labels: el.data('_labels') ?? [],
+        properties: el.data('_props') ?? {},
+      })
+    })
+    cy.on('tap', (evt) => {
+      if (evt.target === cy) setSelected(null)
+    })
     return () => {
       cy.destroy()
       cyRef.current = null
@@ -269,6 +295,31 @@ export function GraphCanvas({ nodes, edges }: Props) {
       </div>
     {searchQuery.trim() && !matchId && (
         <div className="graph-canvas__search-hint">No node matches “{searchQuery}”.</div>
+      )}
+
+      {selected && (
+        <div className="graph-canvas__popover">
+          <div className="graph-canvas__popover-title">{selected.labels.join(':') || 'Node'}</div>
+          <div className="graph-canvas__popover-name">{nodeDisplay(selected)}</div>
+          {popoverLines(selected).length > 0 ? (
+            <ul className="graph-canvas__popover-list">
+              {popoverLines(selected).map(([k, v]) => (
+                <li key={k}>
+                  <span className="graph-canvas__popover-key">{k}:</span> {v}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="graph-canvas__popover-empty">No additional properties.</div>
+          )}
+          <button
+            type="button"
+            className="graph-canvas__popover-close"
+            onClick={() => setSelected(null)}
+          >
+            <X size={12} /> Close
+          </button>
+        </div>
       )}
     </div>
   )

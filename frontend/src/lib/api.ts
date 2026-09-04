@@ -187,11 +187,13 @@ export async function fetchPatient(id: string): Promise<Patient | null> {
 // --- Patient intelligence + treatment intel ----------------------------
 
 export interface SimilarPatient {
-  patient_id: string
+  id: string
+  patient_id?: string
   name: string
   overlap: number
   similarity: number
-  diagnoses: string[]
+  diagnoses?: string[]
+  shared_diagnoses?: string[]
   gender?: string
 }
 
@@ -246,10 +248,30 @@ export interface RankedDiagnosis {
   note: string
 }
 
+export interface RankedTreatment {
+  rank?: number
+  name: string
+  treatment_type?: string
+  disease: string
+  success_rate: number | null
+  cost?: string
+  description?: string
+  recovered_patients: Array<{ id: string; name: string }>
+}
+
+export interface TreatmentRanking {
+  has_data: boolean
+  has_outcome: boolean
+  treatments: RankedTreatment[]
+  note: string | null
+}
+
 export interface TreatmentIntel {
   patient: Patient
   diagnoses: string[]
   ranked: RankedDiagnosis[]
+  treatments?: TreatmentRanking
+  recovered_patients_by_treatment?: Record<string, Array<{ id: string; name: string }>>
   similar_patients: Array<{
     id: string
     name: string

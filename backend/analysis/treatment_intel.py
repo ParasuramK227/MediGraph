@@ -120,3 +120,116 @@ def rank_diagnoses(
     for i, entry in enumerate(ranked, start=1):
         entry["rank"] = i
     return ranked
+
+
+# ---------------------------------------------------------------------------
+# Per-treatment success ranking
+# ---------------------------------------------------------------------------
+
+POSITIVE_OUTCOMES = {"resolved", "cured", "recovered", "improved", "success"}
+
+
+def _treatment_success(t: Dict[str, Any]) -> Optional[float]:
+    """Return a normalized 0..1 success rate for a treatment, or None if no
+    outcome signal is available (so callers can degrade gracefully)."""
+    success = t.get("success")
+    if success is not None:
+        try:
+            return max(0.0, min(1.0, float(success)))
+        except (TypeError, ValueError):
+            pass
+    outcome = (t.get("outcome") or "").strip().lower()
+    if outcome:
+        return 1.0 if outcome in POSITIVE_OUTCOMES else 0.0
+    return None
+
+
+def rank_treatments(
+    target: Dict[str, Any],
+    treatments_by_disease: Dict[str, List[Dict[str, Any]]],
+    recovered_patients_by_treatment: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    top: int = 5,
+) -> Dict[str, Any]:
+    """Rank treatments (1..top) for the target's diagnoses by success rate.
+
+    treatments_by_disease maps disease name -> Treatment records (which may
+    carry outcome/success). recovered_patients_by_treatment optionally maps
+    treatment id -> list of similar patient dicts who recovered on it, so the
+    UI can list "similar patients who got cured".
+
+    Degrades gracefully:
+      - if no treatment->disease edges exist, returns has_data=False + note.
+      - if edges exist but no outcome signal, returns has_data=True,
+        has_outcome=False + neutral per-diagnosis entries.
+    """
+    target_diags = set(target.get("diagnoses") or [])
+    dedup: Dict[str, Dict[str, Any]] = {}
+    has_data = False
+    has_outcome = False
+
+    for disease in target_diags:
+        treats = treatments_by_disease.get(disease) or []
+        if treats:
+            has_data = True
+        for t in treats:
+            rate = _treatment_success(t)
+            if rate is not None:
+                has_outcome = True
+            key = t.get("name") or t.get("treatment_type") or t.get("id")
+            if not key:
+                continue
+            exists = dedup.get(key)
+            if exists is None or (rate is not None and exists.get("_rate") is None):
+                entry = dict(t)
+                entry["disease"] = disease
+                entry["success_rate"] = rate
+                entry["_rate"] = rate
+                # recovered buckets are keyed by treatment name (id may be a
+                # less stable / competing node id); fall back to id lookup.
+                recovered = (recovered_patients_by_treatment or {}).get(
+                    key, (recovered_patients_by_treatment or {}).get(t.get("id"), [])
+                )
+                entry["recovered_patients"] = recovered
+                dedup[key] = entry
+            else:
+                # keep the best rate across overlapping diagnoses
+                if rate is not None and (exists.get("_rate") is None or rate > exists["_rate"]):
+                    exists["success_rate"] = rate
+                    exists["_rate"] = rate
+
+    if not has_data:
+        return {
+            "has_data": False,
+            "has_outcome": False,
+            "treatments": [],
+            "note": (
+                "No treatment→disease links in the graph yet, so treatments "
+                "cannot be ranked. Add (Treatment)-[:TREATS]->(Disease) edges."
+            ),
+        }
+
+    entries = list(dedup.values())
+    # Null success rates rank last; ties broken by name
+    entries.sort(key=lambda e: (e.get("_rate") is None, -(e.get("_rate") or 0), e.get("name") or ""))
+    for i, e in enumerate(entries[:top], start=1):
+        e["rank"] = i
+    for e in entries:
+        e.pop("_rate", None)
+
+    if not has_outcome:
+        return {
+            "has_data": True,
+            "has_outcome": False,
+            "treatments": entries[:top],
+            "note": (
+                f"Found {len(entries)} treatment(s) for this patient's diagnoses, but none "
+                "carry an outcome field yet, so success rates are not available."
+            ),
+        }
+
+    return {
+        "has_data": True,
+        "has_outcome": True,
+        "treatments": entries[:top],
+        "note": None,
+    }

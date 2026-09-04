@@ -71,3 +71,71 @@
   font-size: var(--font-xs);
   color: var(--admin-text);
 }
+.graph-canvas__popover {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 8;
+  min-width: 220px;
+  max-width: 300px;
+  max-height: calc(100% - var(--space-4));
+  overflow: auto;
+  padding: var(--space-3);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: var(--font-xs);
+  color: var(--admin-text);
+}
+
+.graph-canvas__popover-title {
+  font-size: var(--font-xxs, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-accent);
+  margin-bottom: var(--space-1);
+}
+
+.graph-canvas__popover-name {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.graph-canvas__popover-list {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.graph-canvas__popover-key {
+  color: var(--admin-text-muted, #8a919b);
+  text-transform: capitalize;
+}
+
+.graph-canvas__popover-empty {
+  color: var(--admin-text-muted, #8a919b);
+  margin-bottom: var(--space-2);
+}
+
+.graph-canvas__popover-close {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--admin-border);
+  background: transparent;
+  color: var(--admin-text);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+
+.graph-canvas__popover-close:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}

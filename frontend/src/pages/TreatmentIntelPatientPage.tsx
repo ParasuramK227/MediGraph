@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2, TrendingUp, Users } from 'lucide-react'
+import { ArrowLeft, Loader2, TrendingUp, Users, Pill } from 'lucide-react'
 import { fetchTreatmentIntel, type TreatmentIntel } from '../lib/api'
 import './TreatmentIntelPatientPage.css'
 
@@ -119,6 +119,71 @@ export function TreatmentIntelPatientPage() {
             </div>
           )
         })}
+      </section>
+
+      <section className="tii__treatments">
+        <h2 className="tii__section-title">
+          <Pill size={16} /> Recommended treatments
+        </h2>
+        {!data.treatments ? (
+          <p className="tii__muted">Treatment recommendations are not available.</p>
+        ) : !data.treatments.has_data || data.treatments.treatments.length === 0 ? (
+          <div className="tii__treatments-note">
+            {data.treatments.note ?? 'No treatment data available to rank.'}
+          </div>
+        ) : (
+          <>
+            {!data.treatments.has_outcome && data.treatments.note && (
+              <div className="tii__treatments-note">{data.treatments.note}</div>
+            )}
+            <div className="tii__treatment-list">
+              {data.treatments.treatments.map((tr) => {
+                const pct = tr.success_rate == null
+                  ? 0
+                  : Math.max(0, Math.min(100, tr.success_rate * 100))
+                return (
+                  <div className="tii__treatment" key={`${tr.name}-${tr.rank ?? ''}-${tr.disease}`}>
+                    <div className="tii__treatment-rail">
+                      <span className="tii__treatment-rank">
+                        {tr.rank ?? '—'}
+                      </span>
+                    </div>
+                    <div className="tii__treatment-main">
+                      <div className="tii__treatment-name">
+                        {tr.name}
+                        <span className="tii__treatment-disease">{tr.disease}</span>
+                      </div>
+                      {tr.success_rate != null ? (
+                        <div className="tii__rank-bar">
+                          <div className="tii__rank-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                      ) : (
+                        <div className="tii__treatment-rate-na">success rate n/a</div>
+                      )}
+                      <div className="tii__treatment-meta">
+                        {tr.success_rate != null && (
+                          <span className="tii__treatment-rate">
+                            {Math.round(pct)}% success
+                          </span>
+                        )}
+                        {tr.cost ? <span className="tii__treatment-cost">cost {tr.cost}</span> : null}
+                        {tr.description ? (
+                          <span className="tii__treatment-desc">{tr.description}</span>
+                        ) : null}
+                      </div>
+                      {tr.recovered_patients.length > 0 && (
+                        <div className="tii__treatment-recovered">
+                          <strong>Similar patients who recovered:</strong>{' '}
+                          {tr.recovered_patients.map((r) => r.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="tii__similar">

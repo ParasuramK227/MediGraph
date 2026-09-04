@@ -225,8 +225,11 @@ export function PatientDetailPage() {
             ) : (
               <ul className="patient-detail__similar">
                 {intel.similar_patients.map((s) => (
-                  <li key={s.patient_id}>
-                    <Link to={`/patients/${s.patient_id}`} className="patient-detail__similar-link">
+                  <li key={s.id ?? s.patient_id}>
+                    <Link
+                      to={`/patients/${s.id ?? s.patient_id}`}
+                      className="patient-detail__similar-link"
+                    >
                       <span>{s.name}</span>
                       <span className="patient-detail__similar-meta">
                         {Math.round(s.similarity * 100)}% similar
