@@ -11,6 +11,9 @@ interface Message {
 
 interface Props {
   compact?: boolean
+  /** Patient id to auto-select in the dropdown. Passed from the layout when
+      the user is inside a patient page (e.g. /patients/P001). */
+  preselectedPatientId?: string
 }
 
 const SUGGESTIONS = [
@@ -19,7 +22,7 @@ const SUGGESTIONS = [
   'Which medications were discussed?',
 ]
 
-export function ChatPanel({ compact = false }: Props) {
+export function ChatPanel({ compact = false, preselectedPatientId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [patientId, setPatientId] = useState<string>('')
@@ -40,6 +43,11 @@ export function ChatPanel({ compact = false }: Props) {
       cancelled = true
     }
   }, [])
+
+  // Reflect the caller-provided patient (e.g. from the current patient page).
+  useEffect(() => {
+    if (preselectedPatientId) setPatientId(preselectedPatientId)
+  }, [preselectedPatientId])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })

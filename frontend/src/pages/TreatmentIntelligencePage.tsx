@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
-import { HeartPulse, Loader2 } from 'lucide-react'
-import { runCypher } from '../lib/api'
-import { graphFromCypher } from '../lib/graphData'
-import { LazyFeatureGraph, type FEdge, type FNode } from '../components/feature/LazyFeatureGraph'
+import { Link } from 'react-router-dom'
+import { HeartPulse, Loader2, Activity, ArrowRight } from 'lucide-react'
+import { fetchPatients, runCypher, type Patient } from '../lib/api'
 import './TreatmentIntelligencePage.css'
 
+interface PatientWithDiags extends Patient {
+  diagnoses: string[]
+  treatmentCount: number
+  labCount: number
+}
+
 export function TreatmentIntelligencePage() {
-  const [graph, setGraph] = useState<{ nodes: FNode[]; edges: FEdge[] } | null>(null)
+  const [patients, setPatients] = useState<PatientWithDiags[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -14,24 +19,41 @@ export function TreatmentIntelligencePage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    runCypher(
-      `MATCH (d:Disease)<-[:HAS_DIAGNOSIS]-(p:Patient)
-       MATCH (med:Medication)-[:TREATS]->(d)
-       OPTIONAL MATCH (p)-[r:RECEIVED_TREATMENT]->(t:Treatment)
-       RETURN d, p, med, t, r
-       LIMIT 600`,
-    )
-      .then((res) => {
+
+    Promise.all([
+      fetchPatients(),
+      runCypher(
+        `MATCH (p:Patient)
+         OPTIONAL MATCH (p)-[:HAS_DIAGNOSIS]->(d:Disease)
+         OPTIONAL MATCH (p)-[:RECEIVED_TREATMENT]->(t:Treatment)
+         OPTIONAL MATCH (p)-[:HAS_LAB_TEST]->(l:LabTest)
+         RETURN p.id AS id, collect(DISTINCT d.name) AS diagnoses,
+                count(DISTINCT t) AS treatmentCount, count(DISTINCT l) AS labCount`,
+      ),
+    ])
+      .then(([patientList, cypherRes]) => {
         if (cancelled) return
-        if (res.error) {
-          setError(res.error)
-          setGraph(null)
-          return
+        const diagMap = new Map<string, { diagnoses: string[]; treatmentCount: number; labCount: number }>()
+        if (!cypherRes.error) {
+          for (const row of cypherRes.rows) {
+            const id = String(row[0])
+            const diagnoses = (row[1] as string[] | null) ?? []
+            diagMap.set(id, {
+              diagnoses: diagnoses.filter(Boolean),
+              treatmentCount: Number(row[2]) || 0,
+              labCount: Number(row[3]) || 0,
+            })
+          }
         }
-        setGraph(graphFromCypher(res))
+        setPatients(
+          patientList.map((p) => ({
+            ...p,
+            ...(diagMap.get(p.id) ?? { diagnoses: [], treatmentCount: 0, labCount: 0 }),
+          })),
+        )
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load treatment graph')
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load patients')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -40,6 +62,8 @@ export function TreatmentIntelligencePage() {
       cancelled = true
     }
   }, [])
+
+  const hasRanking = (p: PatientWithDiags) => p.diagnoses.length > 0
 
   return (
     <div className="page">
@@ -50,24 +74,76 @@ export function TreatmentIntelligencePage() {
         <div>
           <h1 className="page__heading">Treatment Intelligence</h1>
           <p className="ti__sub">
-            Cross-patient view: diagnoses, the medications that treat them, and the treatments
-            patients actually receive.
+            A culmination of all patients and their diagnoses. Open a patient&apos;s
+            Treatment Intelligence page to see their diagnoses ranked by likelihood of
+            success, computed from similar patients&apos; outcomes — no LLM involved.
           </p>
         </div>
       </div>
 
-      <section className="ti__graph">
-        {loading && (
-          <div className="ti__loading">
-            <Loader2 className="ti__spin" size={20} />
-            Loading treatment intelligence graph…
-          </div>
-        )}
-        {!loading && error && <div className="ti__error">{error}</div>}
-        {!loading && !error && graph && (
-          <LazyFeatureGraph nodes={graph.nodes} edges={graph.edges} height={560} />
-        )}
-      </section>
+      {loading && (
+        <div className="ti__loading">
+          <Loader2 className="ti__spin" size={20} />
+          Loading patients…
+        </div>
+      )}
+      {!loading && error && <div className="ti__error">{error}</div>}
+      {!loading && !error && patients.length === 0 && (
+        <div className="ti__loading">No patients found.</div>
+      )}
+
+      {!loading && !error && patients.length > 0 && (
+        <div className="ti__grid">
+          {patients.map((p) => (
+            <div className="ti__card" key={p.id}>
+              <div className="ti__card-head">
+                <span className="ti__card-name">
+                  {p.first_name} {p.last_name}
+                </span>
+                <span className="ti__card-id">{p.id}</span>
+              </div>
+
+              <div className="ti__card-meta">
+                <span className="ti__meta-chip ti__meta-chip--disease">
+                  {p.diagnoses.length} diagnosis{p.diagnoses.length === 1 ? '' : 'es'}
+                </span>
+                <span className="ti__meta-chip">
+                  <Activity size={12} /> {p.treatmentCount} treatment{p.treatmentCount === 1 ? '' : 's'}
+                </span>
+                <span className="ti__meta-chip ti__meta-chip--lab">
+                  {p.labCount} lab test{p.labCount === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              <div className="ti__card-diags">
+                {p.diagnoses.length ? (
+                  p.diagnoses.slice(0, 3).map((d) => (
+                    <span className="ti__diag-chip" key={d}>
+                      {d}
+                    </span>
+                  ))
+                ) : (
+                  <span className="ti__muted">No diagnoses on record</span>
+                )}
+                {p.diagnoses.length > 3 && (
+                  <span className="ti__muted">+{p.diagnoses.length - 3} more</span>
+                )}
+              </div>
+
+              <div className="ti__card-foot">
+                {hasRanking(p) ? (
+                  <Link className="ti__intel-btn" to={`/treatment-intelligence/${p.id}`}>
+                    Treatment Intelligence
+                    <ArrowRight size={14} />
+                  </Link>
+                ) : (
+                  <span className="ti__muted">No diagnoses to rank</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

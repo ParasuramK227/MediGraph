@@ -184,6 +184,101 @@ export async function fetchPatient(id: string): Promise<Patient | null> {
   return data?.patient ? toPatient(data.patient) : null
 }
 
+// --- Patient intelligence + treatment intel ----------------------------
+
+export interface SimilarPatient {
+  patient_id: string
+  name: string
+  overlap: number
+  similarity: number
+  diagnoses: string[]
+  gender?: string
+}
+
+export interface PatientIntel {
+  patient: Patient
+  summary: string
+  medical_history: {
+    diagnoses: string[]
+    treatments: Array<{
+      id: string
+      type?: string
+      cost?: string
+      date?: string
+      description?: string
+    }>
+    labs: Array<{
+      id: string
+      name: string
+      result: string
+      status: string
+      unit?: string
+      date?: string
+    }>
+    notes: Array<{
+      id: string
+      summary: string
+      created_at: string
+      diagnoses?: string[]
+      medications?: string[]
+      action_items?: string[]
+    }>
+  }
+  similar_patients: SimilarPatient[]
+  medications: Record<string, string[]>
+}
+
+export async function fetchPatientIntel(id: string): Promise<PatientIntel | null> {
+  const res = await fetch(`${API_BASE}/api/graph/patients/${id}/intelligence`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Failed to fetch patient intelligence: ${res.status}`)
+  return (await res.json()) as PatientIntel
+}
+
+export interface RankedDiagnosis {
+  rank: number
+  disease: string
+  score: number
+  confidence_low: boolean
+  cohort_size: number
+  patients_with_labs: number
+  lab_count: number
+  note: string
+}
+
+export interface TreatmentIntel {
+  patient: Patient
+  diagnoses: string[]
+  ranked: RankedDiagnosis[]
+  similar_patients: Array<{
+    id: string
+    name: string
+    similarity: number
+    overlap: number
+  }>
+}
+
+export async function fetchTreatmentIntel(id: string): Promise<TreatmentIntel | null> {
+  const res = await fetch(`${API_BASE}/api/graph/patients/${id}/treatment-intel`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Failed to fetch treatment intelligence: ${res.status}`)
+  return (await res.json()) as TreatmentIntel
+}
+
+export async function fetchAllTreatmentIntel(): Promise<TreatmentIntel[]> {
+  const patients = await fetchPatients()
+  const results = await Promise.all(
+    patients.map(async (p) => {
+      try {
+        return await fetchTreatmentIntel(p.id)
+      } catch {
+        return null
+      }
+    }),
+  )
+  return results.filter((r): r is TreatmentIntel => r !== null)
+}
+
 // --- Graph schema + Cypher (admin panel) -------------------------------
 
 export interface LabelCount {

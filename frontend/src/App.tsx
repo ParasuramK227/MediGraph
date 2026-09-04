@@ -7,6 +7,7 @@ import { PatientDetailPage } from './pages/PatientDetailPage'
 import { SectorsPage } from './pages/SectorsPage'
 import { SectorViewPage } from './pages/SectorViewPage'
 import { TreatmentIntelligencePage } from './pages/TreatmentIntelligencePage'
+import { TreatmentIntelPatientPage } from './pages/TreatmentIntelPatientPage'
 import { GraphExplorerPage } from './pages/GraphExplorerPage'
 import { ChatbotPage } from './pages/ChatbotPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -28,6 +29,10 @@ function App() {
         <Route
           path="/treatment-intelligence"
           element={<TreatmentIntelligencePage />}
+        />
+        <Route
+          path="/treatment-intelligence/:id"
+          element={<TreatmentIntelPatientPage />}
         />
         <Route path="/graph" element={<GraphExplorerPage />} />
         <Route

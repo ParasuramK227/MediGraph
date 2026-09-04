@@ -2,6 +2,7 @@ import time
 
 from flask import Blueprint, request, jsonify
 
+from backend.analysis import graph_fetch
 from backend.neo4j_connection import get_session as neo4j_get_session
 
 graph_bp = Blueprint("graph", __name__)
@@ -175,6 +176,39 @@ def delete_patient(patient_id):
             if rec is None or rec["n"] == 0:
                 return jsonify({"error": f"patient {patient_id} not found"}), 404
         return jsonify({"deleted": True, "id": patient_id}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@graph_bp.route("/patients/<patient_id>/intelligence", methods=["GET"])
+def patient_intelligence(patient_id):
+    """Enriched patient view: summary, medical history, similar patients.
+
+    All derived data is computed deterministically in python (no LLM).
+    """
+    try:
+        with neo4j_get_session() as s:
+            data = graph_fetch.get_patient_intelligence(s, patient_id)
+        if data is None:
+            return jsonify({"error": f"patient {patient_id} not found"}), 404
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@graph_bp.route("/patients/<patient_id>/treatment-intel", methods=["GET"])
+def patient_treatment_intel(patient_id):
+    """Per-patient ranked diagnoses (1..N by success likelihood).
+
+    Scoring is deterministic python (lab-normalized outcome among similar
+    patients sharing each diagnosis); no LLM involved.
+    """
+    try:
+        with neo4j_get_session() as s:
+            data = graph_fetch.get_treatment_intel(s, patient_id)
+        if data is None:
+            return jsonify({"error": f"patient {patient_id} not found"}), 404
+        return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

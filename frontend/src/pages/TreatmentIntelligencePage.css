@@ -1,44 +1,154 @@
 .ti__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .ti__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-base);
+  background: color-mix(in srgb, var(--node-treatment) 20%, transparent);
+  color: var(--color-text);
 }
 
 .ti__sub {
   color: var(--color-text-muted);
   margin-top: var(--space-1);
-  max-width: 56ch;
+  max-width: 720px;
+  line-height: 1.5;
 }
 
-.ti__loading,
-.ti__error {
+.ti__loading {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-8);
   color: var(--color-text-muted);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  padding: var(--space-6) 0;
 }
 
 .ti__spin {
-  animation: ti-spin 0.9s linear infinite;
+  animation: ti-spin 0.8s linear infinite;
 }
 
 @keyframes ti-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.ti__error {
+  color: var(--color-danger);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-radius: var(--radius-base);
+}
+
+.ti__muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-xs);
+}
+
+.ti__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-5);
+}
+
+.ti__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.ti__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ti__card-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ti__card-id {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono-stat);
+}
+
+.ti__card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ti__meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-xs);
+  color: var(--color-text);
+}
+
+.ti__meta-chip--disease {
+  background: color-mix(in srgb, var(--node-disease) 20%, transparent);
+  border-color: transparent;
+}
+
+.ti__meta-chip--lab {
+  background: color-mix(in srgb, var(--node-labtest) 20%, transparent);
+  border-color: transparent;
+}
+
+.ti__card-diags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-height: 24px;
+}
+
+.ti__diag-chip {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--node-disease) 15%, transparent);
+  font-size: var(--font-xs);
+  color: var(--color-text);
+}
+
+.ti__card-foot {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.ti__intel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-base);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ti__intel-btn:hover {
+  filter: brightness(1.05);
 }

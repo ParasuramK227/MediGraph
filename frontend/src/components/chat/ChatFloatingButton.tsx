@@ -1,12 +1,20 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { MessageSquare, Maximize2, X } from 'lucide-react'
 import { ChatPanel } from './ChatPanel'
 import './ChatFloatingButton.css'
 
+/** Extract a patient id from a route like /patients/P001. */
+function patientIdFromPath(pathname: string): string | undefined {
+  const match = pathname.match(/^\/patients\/([^/]+)/)
+  return match?.[1]
+}
+
 export function ChatFloatingButton() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentPatient = patientIdFromPath(location.pathname)
 
   return (
     <>
@@ -34,7 +42,7 @@ export function ChatFloatingButton() {
               </button>
             </div>
           </div>
-          <ChatPanel compact />
+          <ChatPanel compact preselectedPatientId={currentPatient} />
         </div>
       )}
 
