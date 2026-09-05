@@ -14,9 +14,10 @@
 
 ## Live Deployment
 
-* **Frontend Web Application**: [https://medigraph.onrender.com](https://medigraph.onrender.com)
+* **Frontend Web Application**: [https://medigraph-frontend.onrender.com](https://medigraph-frontend.onrender.com/)
 * **Backend REST API**: [https://medigraph-backend.onrender.com](https://medigraph-backend.onrender.com)
 * **API Health & Neo4j Status**: [https://medigraph-backend.onrender.com/api/health](https://medigraph-backend.onrender.com/api/health)
+
 
 ---
 
@@ -208,7 +209,7 @@ MediGraph is configured for 1-click cloud deployment on [Render](https://render.
 4. Enter your environment variables (`NEO4J_URI`, `NEO4J_PASSWORD`, `GROQ_API_KEY`, etc.).
 5. Click **"Apply"** — Render will automatically build and deploy:
    - **`medigraph-backend`** (Python / Gunicorn Web Service)
-   - **`medigraph`** (Vite / React Static Site on global CDN)
+   - **`medigraph-frontend`** (Vite / React Static Site on global CDN)
 
 See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for full deployment details and troubleshooting.
 

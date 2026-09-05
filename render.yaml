@@ -28,7 +28,7 @@ services:
   # 2. MediGraph Frontend UI (Vite / React SPA Static Site)
   # ---------------------------------------------------------------------------
   - type: web
-    name: medigraph
+    name: medigraph-frontend
     runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/dist

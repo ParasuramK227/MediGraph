@@ -57,7 +57,7 @@ def create_app():
                 "status": "online",
                 "neo4j": "connected" if neo4j_ok else "disconnected",
                 "health_endpoint": "/api/health",
-                "frontend": "https://medigraph.onrender.com",
+                "frontend": "https://medigraph-frontend.onrender.com",
             }
 
     return app
