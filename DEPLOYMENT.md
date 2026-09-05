@@ -41,7 +41,7 @@ Render Blueprints automatically configure both the **Backend Web Service** and t
 4. **Click "Apply"**:
    - Render will build and deploy both services simultaneously:
      * **`medigraph-backend`**: Runs Gunicorn Python server on the free tier.
-     * **`medigraph-frontend`**: Builds the Vite React SPA and deploys it on Render's global static CDN with free SSL.
+     * **`medigraph`**: Builds the Vite React SPA and deploys it on Render's global static CDN with free SSL.
      * Render automatically links `VITE_API_BASE` from the backend to the frontend.
 
 ---
@@ -79,7 +79,7 @@ If you prefer having **one single URL** (e.g. `https://medigraph.onrender.com`) 
 ## Verifying the Deployment
 
 Once deployed:
-1. Open your frontend URL (`https://medigraph-frontend.onrender.com` or `https://medigraph.onrender.com`).
+1. Open your frontend URL (`https://medigraph.onrender.com`).
 2. Verify:
    - **Dashboard**: KPI statistics and patient counts load from Neo4j.
    - **Health Check**: Check `https://<backend-url>/api/health` — it should return `{"status": "ok", "neo4j": "connected"}`.
