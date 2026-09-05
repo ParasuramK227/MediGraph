@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Share2,
+  Sparkles,
   Stethoscope,
   Users,
   X,
@@ -41,6 +42,7 @@ const NAV_SECTIONS: { title?: string; items: NavEntry[] }[] = [
     items: [
       { to: '/graph', label: 'Graph Explorer', icon: Share2 },
       { to: '/admin/graph', label: 'Admin Graph', icon: Database },
+      { to: '/project-concept', label: 'Architecture Graph', icon: Sparkles },
     ],
   },
   {
