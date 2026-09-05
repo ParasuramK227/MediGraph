@@ -1,10 +1,16 @@
 import { cleanPersonName } from './formatters'
 
-const rawApiBase: string = (import.meta.env.VITE_API_BASE ?? '').trim()
-const API_BASE: string =
-  rawApiBase && !rawApiBase.startsWith('http') && !rawApiBase.startsWith('/')
-    ? `https://${rawApiBase}`
-    : rawApiBase.replace(/\/+$/, '')
+let rawApiBase: string = (import.meta.env.VITE_API_BASE ?? '').trim()
+if (rawApiBase && !rawApiBase.startsWith('http') && !rawApiBase.startsWith('/')) {
+  if (!rawApiBase.includes('.')) {
+    rawApiBase = `${rawApiBase}.onrender.com`
+  }
+  rawApiBase = `https://${rawApiBase}`
+} else if (!rawApiBase && typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+  rawApiBase = 'https://medigraph-backend.onrender.com'
+}
+const API_BASE: string = rawApiBase.replace(/\/+$/, '')
+
 
 
 export interface HealthStatus {

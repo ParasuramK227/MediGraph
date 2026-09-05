@@ -48,6 +48,17 @@ def create_app():
             if path and os.path.exists(file_path):
                 return send_from_directory(dist_dir, path)
             return send_from_directory(dist_dir, "index.html")
+    else:
+        @app.route("/")
+        def root():
+            neo4j_ok = neo4j_check()
+            return {
+                "service": "MediGraph Backend API",
+                "status": "online",
+                "neo4j": "connected" if neo4j_ok else "disconnected",
+                "health_endpoint": "/api/health",
+                "frontend": "https://medigraph-frontend.onrender.com",
+            }
 
     return app
 

@@ -38,7 +38,5 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_BASE
-        fromService:
-          type: web
-          name: medigraph-backend
-          property: host
+        value: https://medigraph-backend.onrender.com
+
