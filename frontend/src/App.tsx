@@ -10,7 +10,6 @@ import { TreatmentIntelligencePage } from './pages/TreatmentIntelligencePage'
 import { TreatmentIntelPatientPage } from './pages/TreatmentIntelPatientPage'
 import { GraphExplorerPage } from './pages/GraphExplorerPage'
 import { ChatbotPage } from './pages/ChatbotPage'
-import { ProjectConceptGraphPage } from './pages/ProjectConceptGraphPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import './styles/page.css'
 
@@ -36,7 +35,6 @@ function App() {
           element={<TreatmentIntelPatientPage />}
         />
         <Route path="/graph" element={<GraphExplorerPage />} />
-        <Route path="/project-concept" element={<ProjectConceptGraphPage />} />
         <Route
           path="/admin/graph"
           element={

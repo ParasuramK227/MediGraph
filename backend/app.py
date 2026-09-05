@@ -12,7 +12,13 @@ def create_app():
 
     app = Flask(__name__)
     app.config["UPLOAD_TEMP_DIR"] = os.getenv("UPLOAD_TEMP_DIR", tempfile.gettempdir())
-    CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
+
+    cors_origins = os.getenv("CORS_ORIGINS", "*")
+    if cors_origins == "*":
+        CORS(app, resources={r"/api/*": {"origins": "*"}})
+    else:
+        origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
+        CORS(app, resources={r"/api/*": {"origins": origins}})
 
     from backend.routes.scribe import scribe_bp
     from backend.routes.graph import graph_bp
@@ -30,9 +36,24 @@ def create_app():
             "neo4j": "connected" if neo4j_ok else "disconnected",
         }
 
+    # Serve built React frontend if dist exists (unified deployment mode)
+    dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+    if os.path.isdir(dist_dir):
+        from flask import send_from_directory
+
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_frontend(path):
+            file_path = os.path.join(dist_dir, path)
+            if path and os.path.exists(file_path):
+                return send_from_directory(dist_dir, path)
+            return send_from_directory(dist_dir, "index.html")
+
     return app
 
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=os.getenv("FLASK_DEBUG", "0") == "1")
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=os.getenv("FLASK_DEBUG", "0") == "1")
+

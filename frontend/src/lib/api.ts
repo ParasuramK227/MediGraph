@@ -1,6 +1,11 @@
 import { cleanPersonName } from './formatters'
 
-const API_BASE: string = import.meta.env.VITE_API_BASE ?? ''
+const rawApiBase: string = (import.meta.env.VITE_API_BASE ?? '').trim()
+const API_BASE: string =
+  rawApiBase && !rawApiBase.startsWith('http') && !rawApiBase.startsWith('/')
+    ? `https://${rawApiBase}`
+    : rawApiBase.replace(/\/+$/, '')
+
 
 export interface HealthStatus {
   status: 'ok' | 'degraded'

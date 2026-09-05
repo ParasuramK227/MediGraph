@@ -1,0 +1,43 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. MediGraph Backend REST API (Python / Flask / Gunicorn)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: medigraph-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers=2 --threads=4 --timeout=120 "backend.app:create_app()"
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # ---------------------------------------------------------------------------
+  # 2. MediGraph Frontend UI (Vite / React SPA Static Site)
+  # ---------------------------------------------------------------------------
+  - type: static
+    name: medigraph-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: medigraph-backend
+          property: host
